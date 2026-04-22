@@ -4,7 +4,7 @@ import React from 'react';
 import { AuthProvider } from '../context/AuthContext';
 import { FinanceProvider } from '../context/FinanceContext';
 import { ThemeProvider } from '../context/ThemeContext';
-import RootNavigator from '../navigation/RootNavigator';
+import RootNavigator from '../navigation/RootNavigation';
 
 export default function RootLayout() {
   return (
