@@ -1,16 +1,27 @@
+import { NavigationContainer } from '@react-navigation/native';
 import { AuthProvider } from './context/AuthContext';
 import { FinanceProvider } from './context/FinanceContext';
-import { ThemeProvider } from './context/ThemeContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import RootNavigator from './navigation/RootNavigator';
+
+function AppWrapper() {
+  const { theme } = useTheme();
+
+  return (
+    <NavigationContainer theme={theme}>
+      <RootNavigator />
+    </NavigationContainer>
+  );
+}
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ThemeProvider>
+    <ThemeProvider>
+      <AuthProvider>
         <FinanceProvider>
-          <RootNavigator />
+          <AppWrapper />
         </FinanceProvider>
-      </ThemeProvider>
-    </AuthProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
