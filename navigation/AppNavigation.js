@@ -1,5 +1,4 @@
-import { Ionicons } from '@expo/vector-icons'; // Note: only used for tab icons - replace with custom SVGs if no vector icons allowed
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
 import { NavigationContainer } from '@react-navigation/native';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
