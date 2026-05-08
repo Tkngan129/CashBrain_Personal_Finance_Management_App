@@ -1,19 +1,9 @@
-// app/index.tsx
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useAuth } from '../context/AuthContext';
 
-export default function Page() {
-  return (
-    <View style={styles.container}>
-      <Text>Đang chuyển hướng...</Text>
-    </View>
-  );
+export default function Index() {
+  const { isLoggedIn, isLoading } = useAuth();
+
+  // Wait for auth check to complete - the navigation is handled by _layout.tsx
+  // based on isLoggedIn state, so we don't need to render anything here
+  return null;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});

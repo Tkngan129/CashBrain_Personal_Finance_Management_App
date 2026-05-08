@@ -13,12 +13,17 @@ export default function AIChatScreen() {
   const addTransaction = useStore((s) => s.addTransaction);
 
   const send = async () => {
-    const parsed = await parseWithAI(input);
+  const parsed = await parseWithAI(input);
 
-    setMessages((prev) => [...prev, { text: input, sender: 'user' }]);
-    setPending(parsed);
-    setInput('');
-  };
+  setMessages((prev) => [...prev, { text: input, sender: 'user' }]);
+  setPending(parsed);
+  setInput('');
+};
+
+const confirmTransaction = async () => {
+  await addTransaction(pending);
+  setPending(null);
+};
 
   return (
     <View>

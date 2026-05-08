@@ -8,16 +8,24 @@ export const ThemeProvider = ({ children }) => {
 
   useEffect(() => {
     const loadTheme = async () => {
-      const saved = await AsyncStorage.getItem('@finance_app_theme');
-      if (saved !== null) setIsDarkMode(JSON.parse(saved));
+      try {
+        const saved = await AsyncStorage.getItem('@finance_app_theme');
+        if (saved !== null) setIsDarkMode(JSON.parse(saved));
+      } catch (error) {
+        console.warn('Failed to load theme:', error);
+      }
     };
     loadTheme();
   }, []);
 
   const toggleDarkMode = async () => {
-    const newMode = !isDarkMode;
-    setIsDarkMode(newMode);
-    await AsyncStorage.setItem('@finance_app_theme', JSON.stringify(newMode));
+    try {
+      const newMode = !isDarkMode;
+      setIsDarkMode(newMode);
+      await AsyncStorage.setItem('@finance_app_theme', JSON.stringify(newMode));
+    } catch (error) {
+      console.warn('Failed to save theme:', error);
+    }
   };
 
   return (
