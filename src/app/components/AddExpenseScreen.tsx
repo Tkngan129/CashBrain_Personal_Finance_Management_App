@@ -1,12 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
+import dayjs from 'dayjs';
 import React, { useState } from 'react';
 import {
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 const styles = StyleSheet.create({
@@ -132,6 +135,56 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#ffffff',
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  calendarModal: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  monthText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  weekRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  dayCell: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    margin: 2,
+    borderRadius: 18,
+  },
+  dayCellSelected: {
+    backgroundColor: '#1C4D8D',
+  },
+  dayCellText: {
+    color: '#0f172a',
+    fontWeight: '600',
+  },
+  todayButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
 });
 
 interface AddExpenseScreenProps {
@@ -153,7 +206,17 @@ export function AddExpenseScreen({ onClose, initialType = 'expense' }: AddExpens
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('food');
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [date, setDate] = useState('Today');
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(dayjs().startOf('month'));
+
+  const formatDateLabel = (d: Date) => {
+    const today = dayjs();
+    const target = dayjs(d);
+    if (today.isSame(target, 'day')) return 'Today';
+    return target.format('MMM D');
+  };
 
   const handleSubmit = () => {
     if (amount && description) {
@@ -259,13 +322,66 @@ export function AddExpenseScreen({ onClose, initialType = 'expense' }: AddExpens
         <View style={styles.section}>
           <View style={styles.card}>
             <Text style={styles.inputLabel}>Date</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Today"
-              placeholderTextColor="#cbd5e1"
-              value={date}
-              onChangeText={setDate}
-            />
+            <Pressable style={[styles.input, { justifyContent: 'space-between', flexDirection: 'row', alignItems: 'center' }]} onPress={() => setShowCalendar(true)}>
+              <Text style={{ color: date === 'Today' ? '#0f172a' : '#0f172a' }}>{date}</Text>
+              <Ionicons name="calendar-outline" size={18} color="#64748b" />
+            </Pressable>
+
+            <Modal visible={showCalendar} transparent animationType="fade">
+              <View style={styles.modalOverlay}>
+                <View style={styles.calendarModal}>
+                  <View style={styles.calendarHeader}>
+                    <TouchableOpacity onPress={() => setCalendarMonth(calendarMonth.subtract(1, 'month'))}>
+                      <Ionicons name="chevron-back" size={22} color="#1C4D8D" />
+                    </TouchableOpacity>
+                    <Text style={styles.monthText}>{calendarMonth.format('MMMM YYYY')}</Text>
+                    <TouchableOpacity onPress={() => setCalendarMonth(calendarMonth.add(1, 'month'))}>
+                      <Ionicons name="chevron-forward" size={22} color="#1C4D8D" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.weekRow}>
+                    {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((w) => (
+                      <Text key={w} style={{ width: 36, textAlign: 'center', color: '#64748b', fontWeight: '700' }}>{w}</Text>
+                    ))}
+                  </View>
+
+                  {/* days grid */}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                    {(() => {
+                      const startDay = calendarMonth.startOf('month').day();
+                      const daysInMonth = calendarMonth.daysInMonth();
+                      const blanks = Array.from({ length: startDay }).map((_, i) => (<View key={`b${i}`} style={{ width: 36, height: 36 }} />));
+                      const days = Array.from({ length: daysInMonth }).map((_, i) => {
+                        const dayNum = i + 1;
+                        const dt = calendarMonth.date(dayNum);
+                        const isSelected = dayjs(selectedDate).isSame(dt, 'day');
+                        return (
+                          <Pressable key={dayNum} style={[styles.dayCell, isSelected && styles.dayCellSelected]} onPress={() => {
+                            const newDate = dt.toDate();
+                            setSelectedDate(newDate);
+                            setDate(formatDateLabel(newDate));
+                            setShowCalendar(false);
+                          }}>
+                            <Text style={[styles.dayCellText, isSelected && { color: '#fff' }]}>{dayNum}</Text>
+                          </Pressable>
+                        );
+                      });
+                      return [...blanks, ...days];
+                    })()}
+                  </View>
+
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+                    <Pressable onPress={() => { const today = new Date(); setSelectedDate(today); setDate(formatDateLabel(today)); setShowCalendar(false); }} style={styles.todayButton}>
+                      <Text style={{ color: '#1C4D8D', fontWeight: '700' }}>Today</Text>
+                    </Pressable>
+                    <Pressable onPress={() => setShowCalendar(false)} style={styles.todayButton}>
+                      <Text style={{ color: '#64748b' }}>Cancel</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </View>
+            </Modal>
           </View>
         </View>
 
