@@ -1,11 +1,23 @@
-import { useState, useEffect } from 'react';
 import {
-  X, Coffee, ShoppingBag, Car, Home, Heart, GraduationCap,
-  Smartphone, UtensilsCrossed, Plane, Sparkles, Check,
-  Receipt, Banknote, ChevronDown,
+    Banknote,
+    Car,
+    Check,
+    ChevronDown,
+    Coffee,
+    GraduationCap,
+    Heart,
+    Home,
+    Plane,
+    Receipt,
+    ShoppingBag,
+    Smartphone,
+    Sparkles,
+    UtensilsCrossed,
+    X,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { AnimatePresence, motion } from '../lib/motion';
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 const categories = [

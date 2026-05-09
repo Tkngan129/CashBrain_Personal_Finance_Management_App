@@ -1,7 +1,7 @@
+import { Car, Coffee, Edit2, GraduationCap, Heart, Home, Plane, Plus, ShoppingBag, Smartphone, Trash2, UtensilsCrossed } from 'lucide-react';
 import { useState } from 'react';
-import { Coffee, ShoppingBag, Car, Home, Heart, GraduationCap, Smartphone, UtensilsCrossed, Plane, Plus, Edit2, Trash2 } from 'lucide-react';
-import { motion } from 'motion/react';
 import { toast } from 'sonner';
+import { motion } from '../lib/motion';
 
 const initialCategories = [
   { id: 'food', name: 'Food', icon: Coffee, color: '#FF6B6B', spending: 45000, transactions: 1 },

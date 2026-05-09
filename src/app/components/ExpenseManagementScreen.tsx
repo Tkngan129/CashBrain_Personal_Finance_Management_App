@@ -1,7 +1,7 @@
+import { Car, ChevronDown, Coffee, GraduationCap, ShoppingBag } from 'lucide-react';
 import { useState } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { motion } from 'motion/react';
-import { Coffee, ShoppingBag, Car, GraduationCap, ChevronDown } from 'lucide-react';
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
+import { motion } from '../lib/motion';
 
 const categoryData = [
   { name: 'Education', value: 399000, color: '#3b82f6', percentage: 55.5 },

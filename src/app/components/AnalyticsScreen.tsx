@@ -1,14 +1,26 @@
+import {
+    CalendarDays, Camera,
+    Car,
+    ChevronLeft, ChevronRight,
+    Coffee,
+    GraduationCap,
+    ShoppingBag,
+    TrendingDown, TrendingUp,
+    Wallet,
+} from 'lucide-react';
 import { useState } from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell,
-  PieChart, Pie,
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Cell,
+    Pie,
+    PieChart,
+    ResponsiveContainer, Tooltip,
+    XAxis, YAxis,
 } from 'recharts';
-import { motion, AnimatePresence } from 'motion/react';
-import {
-  TrendingDown, TrendingUp, ChevronLeft, ChevronRight,
-  Coffee, ShoppingBag, Car, GraduationCap, Wallet, CalendarDays, Camera,
-} from 'lucide-react';
 import { useTransactions } from '../context/TransactionContext';
+import { AnimatePresence, motion } from '../lib/motion';
 
 // ─── Currency helper ──────────────────────────────────────────────────────────
 const fmtVND = (n: number) => `${Math.abs(n).toLocaleString('en-US')} VND`;

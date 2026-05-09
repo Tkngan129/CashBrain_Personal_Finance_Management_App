@@ -1,12 +1,28 @@
-import { useState } from 'react';
 import {
-  User, Settings, Bell, CreditCard, HelpCircle, Shield,
-  LogOut, ChevronRight, Tag, Target, Edit3, Star,
-  Moon, Globe, X, Trash2, Pencil, Plus, Check, RefreshCw, Camera,
+    Bell,
+    Camera,
+    Check,
+    ChevronRight,
+    CreditCard,
+    Edit3,
+    Globe,
+    HelpCircle,
+    LogOut,
+    Moon,
+    Pencil, Plus,
+    RefreshCw,
+    Settings,
+    Shield,
+    Star,
+    Tag, Target,
+    Trash2,
+    User,
+    X,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { useTransactions } from '../context/TransactionContext';
+import { AnimatePresence, motion } from '../lib/motion';
 
 // ─── Budget constants (same as Dashboard) ────────────────────────────────────
 const TOTAL_BUDGET    = 4_000_000;

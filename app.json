@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "CashBrain",
+    "slug": "cashbrain",
+    "scheme": "cashbrain",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "platforms": ["ios", "android", "web"],
+    "userInterfaceStyle": "light"
+  }
+}

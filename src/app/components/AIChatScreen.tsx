@@ -1,9 +1,15 @@
-import { useState, useRef, useEffect } from 'react';
 import {
-  Send, Sparkles, User, Check, Coffee, ShoppingBag,
-  Car, GraduationCap, Wallet, Mic,
+    Car,
+    Check, Coffee,
+    GraduationCap,
+    Mic,
+    Send,
+    ShoppingBag,
+    Sparkles, User,
+    Wallet,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from '../lib/motion';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 interface TransactionCard {

@@ -1,11 +1,18 @@
-import { useState } from 'react';
 import {
-  Coffee, ShoppingBag, Car, Home, Heart, GraduationCap,
-  Smartphone, UtensilsCrossed, Plane, Check,
+    Car,
+    Check,
+    Coffee,
+    GraduationCap,
+    Heart,
+    Home,
+    Plane,
+    ShoppingBag,
+    Smartphone, UtensilsCrossed,
 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { useTransactions } from '../context/TransactionContext';
+import { motion } from '../lib/motion';
 
 // ─── Categories ───────────────────────────────────────────────────────────────
 const CATS = [

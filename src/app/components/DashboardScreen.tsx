@@ -1,11 +1,22 @@
 import {
-  Bell, Wallet, ArrowUp, ArrowDown, TrendingUp,
-  Receipt, Banknote,
-  Coffee, ShoppingBag, Car, GraduationCap, Sparkles, ChevronRight, Camera,
+    ArrowDown,
+    ArrowUp,
+    Banknote,
+    Bell,
+    Camera,
+    Car,
+    ChevronRight,
+    Coffee,
+    GraduationCap,
+    Receipt,
+    ShoppingBag,
+    Sparkles,
+    TrendingUp,
+    Wallet,
 } from 'lucide-react';
-import { motion } from 'motion/react';
-import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip, Cell } from 'recharts';
+import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
 import { useTransactions } from '../context/TransactionContext';
+import { motion } from '../lib/motion';
 
 type Screen = 'home' | 'analytics' | 'add' | 'chat' | 'me';
 
