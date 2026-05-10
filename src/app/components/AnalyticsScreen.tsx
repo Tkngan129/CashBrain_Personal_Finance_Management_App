@@ -725,7 +725,7 @@ export function AnalyticsScreen({ onAddTransaction }: AnalyticsScreenProps) {
 
             <View style={styles.overviewSummaryGrid}>
               <Pressable
-                style={[styles.overviewMetricCard, overviewActiveMetric === 'expenses' && styles.overviewMetricCardActive]}
+                style={[styles.overviewMetricCard, overviewActiveMetric === 'expenses' && styles.overviewMetricCardActiveLeft]}
                 onPress={() => setOverviewActiveMetric('expenses')}
               >
                 <View style={styles.overviewMetricTitleRow}>
@@ -738,7 +738,7 @@ export function AnalyticsScreen({ onAddTransaction }: AnalyticsScreenProps) {
               </Pressable>
 
               <Pressable
-                style={[styles.overviewMetricCard, overviewActiveMetric === 'income' && styles.overviewMetricCardActive]}
+                style={[styles.overviewMetricCard, overviewActiveMetric === 'income' && styles.overviewMetricCardActiveRight]}
                 onPress={() => setOverviewActiveMetric('income')}
               >
                 <View style={styles.overviewMetricTitleRow}>
@@ -755,7 +755,7 @@ export function AnalyticsScreen({ onAddTransaction }: AnalyticsScreenProps) {
 
             <View style={[styles.overviewChartBlock, { borderColor: colors.chartCardBorder, borderWidth: 1, borderRadius: 16, padding: 8, backgroundColor: colors.barTrackBg }]}>
               <View style={styles.overviewYAxisHeader}>
-                <Text style={[styles.overviewYAxisLabel, { color: colors.chartLabelText }]}>(Million VND)</Text>
+                <Text style={[styles.overviewYAxisLabel, { color: colors.chartLabelText }]}>(VND)</Text>
               </View>
 
               <View style={styles.barChartWrap}>
@@ -1524,9 +1524,18 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     backgroundColor: '#ffffff',
   },
-  overviewMetricCardActive: {
+  overviewMetricCardActiveLeft: {
     borderWidth: 2,
     borderColor: '#f59ac8',
+    borderTopLeftRadius: 18,
+    borderBottomLeftRadius: 18,
+    margin: -1,
+  },
+  overviewMetricCardActiveRight: {
+    borderWidth: 2,
+    borderColor: '#f59ac8',
+    borderTopRightRadius: 18,
+    borderBottomRightRadius: 18,
     margin: -1,
   },
   overviewMetricTitleRow: {

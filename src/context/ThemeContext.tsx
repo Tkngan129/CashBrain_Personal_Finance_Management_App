@@ -49,7 +49,7 @@ export const lightColors = {
   barFillActive: '#214f95',
   barTrackBg: '#f1f5f9',
   chartCardBorder: 'rgba(28,77,141,0.12)',
-  chartLabelText: '#94a3b8',
+  chartLabelText: '#64748b',
   switchTrackOff: '#e2e8f0',
 };
 
