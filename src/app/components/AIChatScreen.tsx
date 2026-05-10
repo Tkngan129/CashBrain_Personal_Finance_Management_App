@@ -146,35 +146,37 @@ export function AIChatScreen() {
         })}
 
         {/* Smart Insights Card */}
-        <View style={[styles.insightsCard, { backgroundColor: colors.card }]}>
-          <View style={styles.insightsHeaderRow}>
-            <View style={styles.insightsBadge}>
-              <Ionicons name="flash" size={13} color="#ec4899" />
-              <Text style={styles.insightsBadgeText}>Smart Insights</Text>
+        {messages.length <= 1 && (
+          <View style={[styles.insightsCard, { backgroundColor: colors.card }]}>
+            <View style={styles.insightsHeaderRow}>
+              <View style={styles.insightsBadge}>
+                <Ionicons name="flash" size={13} color="#ec4899" />
+                <Text style={styles.insightsBadgeText}>Smart Insights</Text>
+              </View>
+            </View>
+            <View style={styles.insightItem}>
+              <View style={[styles.insightDot, { backgroundColor: '#16a34a' }]} />
+              <View style={styles.insightTextWrap}>
+                <Text style={[styles.insightTitle, { color: colors.text }]}>On Track! 🎯</Text>
+                <Text style={[styles.insightDesc, { color: colors.textSecondary }]}>You've only used 18% of your April budget.</Text>
+              </View>
+            </View>
+            <View style={styles.insightItem}>
+              <View style={[styles.insightDot, { backgroundColor: '#f59e0b' }]} />
+              <View style={styles.insightTextWrap}>
+                <Text style={[styles.insightTitle, { color: colors.text }]}>Education Spending</Text>
+                <Text style={[styles.insightDesc, { color: colors.textSecondary }]}>55% of expenses. Consider free resources.</Text>
+              </View>
+            </View>
+            <View style={styles.insightItem}>
+              <View style={[styles.insightDot, { backgroundColor: '#3b82f6' }]} />
+              <View style={styles.insightTextWrap}>
+                <Text style={[styles.insightTitle, { color: colors.text }]}>Savings Potential</Text>
+                <Text style={[styles.insightDesc, { color: colors.textSecondary }]}>You could save ~200K more this month.</Text>
+              </View>
             </View>
           </View>
-          <View style={styles.insightItem}>
-            <View style={[styles.insightDot, { backgroundColor: '#16a34a' }]} />
-            <View style={styles.insightTextWrap}>
-              <Text style={[styles.insightTitle, { color: colors.text }]}>On Track! 🎯</Text>
-              <Text style={[styles.insightDesc, { color: colors.textSecondary }]}>You've only used 18% of your April budget.</Text>
-            </View>
-          </View>
-          <View style={styles.insightItem}>
-            <View style={[styles.insightDot, { backgroundColor: '#f59e0b' }]} />
-            <View style={styles.insightTextWrap}>
-              <Text style={[styles.insightTitle, { color: colors.text }]}>Education Spending</Text>
-              <Text style={[styles.insightDesc, { color: colors.textSecondary }]}>55% of expenses. Consider free resources.</Text>
-            </View>
-          </View>
-          <View style={styles.insightItem}>
-            <View style={[styles.insightDot, { backgroundColor: '#3b82f6' }]} />
-            <View style={styles.insightTextWrap}>
-              <Text style={[styles.insightTitle, { color: colors.text }]}>Savings Potential</Text>
-              <Text style={[styles.insightDesc, { color: colors.textSecondary }]}>You could save ~200K more this month.</Text>
-            </View>
-          </View>
-        </View>
+        )}
       </ScrollView>
 
       {/* Quick Prompts */}
@@ -495,9 +497,9 @@ const styles = StyleSheet.create({
   },
   inputWrap: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     backgroundColor: '#f4f7fc',
-    borderRadius: 18,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: '#dde4ef',
     paddingHorizontal: 6,
@@ -521,7 +523,7 @@ const styles = StyleSheet.create({
   sendButton: {
     width: 36,
     height: 36,
-    borderRadius: 12,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
   },

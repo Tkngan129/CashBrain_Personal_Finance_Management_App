@@ -56,7 +56,7 @@ function MenuItem({ icon, iconBg, iconColor, label, subtitle, last, toggle, togg
   );
 }
 
-export function ProfileScreen() {
+export function ProfileScreen({ onLogout }: { onLogout?: () => void }) {
   const { isDark, setDark } = useTheme();
   const colors = useColors();
   return (
@@ -196,7 +196,7 @@ export function ProfileScreen() {
       </View>
 
       {/* Log Out */}
-      <Pressable style={styles.logoutButton}>
+      <Pressable style={styles.logoutButton} onPress={onLogout}>
         <Ionicons name="log-out-outline" size={18} color="#ef4444" />
         <Text style={styles.logoutText}>Log Out</Text>
       </Pressable>

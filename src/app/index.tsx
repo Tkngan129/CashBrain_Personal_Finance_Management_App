@@ -16,6 +16,7 @@ import { AnalyticsScreen } from './components/AnalyticsScreen';
 import { CameraScreen } from './components/CameraScreen';
 import { DashboardScreen } from './components/DashboardScreen';
 import { ProfileScreen } from './components/ProfileScreen';
+import { LoginScreen } from './components/LoginScreen';
 import { ThemeProvider, useColors } from '../context/ThemeContext';
 
 type ScreenId =
@@ -55,6 +56,7 @@ function AppInner() {
 	const colors = useColors();
 	const [activeScreen, setActiveScreen] =
 		useState<ScreenId>('home');
+	const [isAuthenticated, setIsAuthenticated] = useState(false);
 	const [addTransactionType, setAddTransactionType] =
 		useState<'expense' | 'income'>('expense');
 	const [addTransactionReturnScreen, setAddTransactionReturnScreen] =
@@ -113,7 +115,7 @@ function AppInner() {
 				return <AIChatScreen />;
 
 			case 'profile':
-				return <ProfileScreen />;
+				return <ProfileScreen onLogout={() => setIsAuthenticated(false)} />;
 
 			case 'camera':
 				return <CameraScreen />;
@@ -172,6 +174,10 @@ function AppInner() {
 			</Pressable>
 		);
 	};
+
+	if (!isAuthenticated) {
+		return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
+	}
 
 	return (
 		<SafeAreaView
