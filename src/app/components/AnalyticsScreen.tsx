@@ -30,9 +30,6 @@ const totalSpent = 719_000;
 const totalIncome = 4_000_000;
 const netThisMonth = 2_741_000;
 
-const [showRangePicker, setShowRangePicker] = useState(false);
-const [calendarMonthDate, setCalendarMonthDate] = useState(new Date(2026, 3, 1));
-
 const expenseBreakdown = [
   { name: 'Education', amount: 399_000, color: '#b9a2ff' },
   { name: 'Shopping', amount: 250_000, color: '#ffb767' },
@@ -150,6 +147,7 @@ export function AnalyticsScreen({ onAddTransaction }: AnalyticsScreenProps) {
   const [draftWeekIndex, setDraftWeekIndex] = useState(0);
   const [appliedWeekIndex, setAppliedWeekIndex] = useState(0);
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<number>(1);
+  const [calendarMonthDate, setCalendarMonthDate] = useState(new Date(2026, 3, 1));
   const [showRangePicker, setShowRangePicker] = useState(false);
   const [overviewActiveMetric, setOverviewActiveMetric] = useState<'expenses' | 'income'>('expenses');
   const [showAllCategories, setShowAllCategories] = useState(false);
@@ -182,7 +180,7 @@ export function AnalyticsScreen({ onAddTransaction }: AnalyticsScreenProps) {
   }, []);
 
   const calendarDayData = useMemo(() => {
-    return Array.from({ length: 30 }, (_, index) => {
+    const days = Array.from({ length: 30 }, (_, index) => {
       const day = index + 1;
       const transactions = calendarTransactions.filter((tx) => tx.day === day);
       const total = transactions.reduce((sum, tx) => sum + tx.amount, 0);
@@ -191,12 +189,21 @@ export function AnalyticsScreen({ onAddTransaction }: AnalyticsScreenProps) {
         transactions,
         total,
         hasTransactions: transactions.length > 0,
+        isEmpty: false,
       };
     });
+    
+    // Add 2 padding days for Wednesday start
+    const padded = [
+      { day: -1, transactions: [], total: 0, hasTransactions: false, isEmpty: true },
+      { day: 0, transactions: [], total: 0, hasTransactions: false, isEmpty: true },
+      ...days
+    ];
+    return padded;
   }, []);
 
   const selectedDayData = useMemo(
-    () => calendarDayData.find((item) => item.day === selectedCalendarDay) ?? calendarDayData[0],
+    () => calendarDayData.find((item) => item.day === selectedCalendarDay && !item.isEmpty) ?? calendarDayData.find(item => !item.isEmpty) ?? calendarDayData[2],
     [calendarDayData, selectedCalendarDay],
   );
 
@@ -471,7 +478,7 @@ export function AnalyticsScreen({ onAddTransaction }: AnalyticsScreenProps) {
           <View style={[styles.panelCard, { backgroundColor: colors.card }]}>
             <View style={styles.panelHeaderRow}>
               <Text style={[styles.panelTitle, { color: colors.text }]}>Spending by Category</Text>
-              <Text style={[styles.panelTotal, { color: colors.textMuted }]}>{fmtVND(totalSpent)} total</Text>
+              <Text style={[styles.panelTotal, { color: colors.textSecondary }]}>{fmtVND(totalSpent)} total</Text>
             </View>
 
             <View style={styles.categoryGrid}>
@@ -574,25 +581,17 @@ export function AnalyticsScreen({ onAddTransaction }: AnalyticsScreenProps) {
         <View style={styles.calendarView}>
           <View style={styles.calendarCard}>
             <View style={styles.calendarToolbarRow}>
-              <Pressable style={styles.calendarIconButton}>
-                <Ionicons name="eye-outline" size={22} color="#3b3b3b" />
-              </Pressable>
-
               <View style={styles.calendarMonthPicker}>
                 <Pressable style={styles.calendarMonthNavButton}>
-                  <Ionicons name="chevron-back" size={18} color="#3b3b3b" />
+                  <Ionicons name="chevron-back" size={18} color="#64748b" />
                 </Pressable>
                 <Text style={styles.calendarMonth}>
                   {monthLabels[calendarMonthDate.getMonth()]} {calendarMonthDate.getFullYear()}
                 </Text>
                 <Pressable style={styles.calendarMonthNavButton}>
-                  <Ionicons name="chevron-forward" size={18} color="#3b3b3b" />
+                  <Ionicons name="chevron-forward" size={18} color="#64748b" />
                 </Pressable>
               </View>
-
-              <Pressable style={styles.calendarIconButton}>
-                <Ionicons name="filter-outline" size={22} color="#3b3b3b" />
-              </Pressable>
             </View>
 
             <View style={styles.weekdayRow}>
@@ -602,7 +601,10 @@ export function AnalyticsScreen({ onAddTransaction }: AnalyticsScreenProps) {
             </View>
 
             <View style={styles.calendarGrid}>
-              {calendarDayData.map((item) => {
+              {calendarDayData.map((item, idx) => {
+                if (item.isEmpty) {
+                  return <View key={`empty-${idx}`} style={styles.calendarCell} />;
+                }
                 const isHighlighted = item.hasTransactions;
                 const isIncome = item.total > 0;
                 const isSelected = selectedCalendarDay === item.day;
@@ -628,6 +630,7 @@ export function AnalyticsScreen({ onAddTransaction }: AnalyticsScreenProps) {
                         <Text style={[
                           styles.calendarBubbleAmount,
                           item.total > 0 ? styles.calendarIncomeText : styles.calendarExpenseText,
+                          isSelected && styles.calendarSelectedDayText,
                         ]}>
                           {item.total > 0 ? '+' : '-'}{formatCalendarAmount(item.total)}
                         </Text>
@@ -638,37 +641,26 @@ export function AnalyticsScreen({ onAddTransaction }: AnalyticsScreenProps) {
               })}
             </View>
 
-            <View style={styles.calendarLegendRow}>
-              <View style={styles.calendarLegendItem}>
-                <View style={[styles.calendarLegendDot, { backgroundColor: '#16a34a' }]} />
-                <Text style={styles.calendarLegendText}>Income</Text>
-              </View>
-              <View style={styles.calendarLegendItem}>
-                <View style={[styles.calendarLegendDot, { backgroundColor: '#2f3135' }]} />
-                <Text style={styles.calendarLegendText}>Expense</Text>
-              </View>
-              <View style={styles.calendarLegendItem}>
-                <View style={[styles.calendarLegendDot, { backgroundColor: '#ef4444' }]} />
-                <Text style={styles.calendarLegendText}>Unusual High Expense</Text>
-                <Ionicons name="information-circle-outline" size={14} color="#6b7280" />
-              </View>
-            </View>
-
-            <View style={styles.calendarHandleWrap}>
-              <View style={styles.calendarHandle} />
+            <View style={styles.netMonthDivider} />
+            <View style={styles.netMonthRow}>
+              <Text style={styles.netMonthLabel}>Net this month</Text>
+              <Text style={[styles.netMonthValue, netThisMonth >= 0 ? styles.calendarIncomeText : styles.calendarExpenseText]}>
+                {netThisMonth >= 0 ? '+' : '-'}{fmtVND(netThisMonth)}
+              </Text>
             </View>
 
             <View style={styles.selectedDaySection}>
-              <View style={styles.dayTransactionsHeaderRow}>
-                <View>
-                  <Text style={styles.dayTransactionsTitle}>Transaction List</Text>
-                  <Text style={styles.dayTransactionsSubtitle}>
-                    {selectedDayData.transactions.length} transaction{selectedDayData.transactions.length === 1 ? '' : 's'}
-                  </Text>
+              <View style={styles.selectedDayHeader}>
+                <View style={styles.selectedDayTitleRow}>
+                  <Ionicons name="calendar-outline" size={20} color="#334155" />
+                  <Text style={styles.selectedDayTitle}>April {selectedCalendarDay}</Text>
                 </View>
-                <Pressable style={styles.selectedDayActionButton} onPress={() => onAddTransaction?.('expense')}>
-                  <Text style={styles.selectedDayActionText}>+ Add Transaction</Text>
-                </Pressable>
+                <View style={styles.selectedDaySummary}>
+                  <Text style={[styles.selectedDayNetAmount, selectedDayData.total >= 0 ? styles.calendarIncomeText : styles.calendarExpenseText]}>
+                    {selectedDayData.total >= 0 ? '+' : '-'}{fmtVND(selectedDayData.total)}
+                  </Text>
+                  <Text style={styles.selectedDayNetLabel}>Net {selectedDayData.total >= 0 ? 'income' : 'expense'}</Text>
+                </View>
               </View>
 
               <View style={styles.selectedDayList}>
@@ -682,12 +674,15 @@ export function AnalyticsScreen({ onAddTransaction }: AnalyticsScreenProps) {
                           <Ionicons name={categoryMeta.icon as any} size={22} color={categoryMeta.color} />
                         </View>
                         <View style={styles.selectedDayInfo}>
-                          <Text style={styles.transactionTitle}>{tx.title}</Text>
-                          <Text style={styles.transactionMeta}>{categoryMeta.label} · {tx.time}</Text>
+                          <Text style={styles.selectedDayTransactionTitle}>{tx.title}</Text>
+                          <Text style={styles.selectedDayTransactionMeta}>Apr {tx.day} · {tx.time}</Text>
                         </View>
-                        <Text style={[styles.selectedDayAmount, isIncome ? styles.calendarIncomeText : styles.calendarExpenseText]}>
-                          {isIncome ? '+' : '-'}{fmtVND(tx.amount)}
-                        </Text>
+                        <View style={styles.selectedDayAmountWrap}>
+                          <Text style={[styles.selectedDayAmount, isIncome ? styles.calendarIncomeText : styles.calendarExpenseText]}>
+                            {isIncome ? '+' : '-'}{fmtVND(tx.amount)}
+                          </Text>
+                          <Text style={styles.selectedDayTransactionCategory}>{categoryMeta.label}</Text>
+                        </View>
                       </View>
                     );
                   })
@@ -695,19 +690,7 @@ export function AnalyticsScreen({ onAddTransaction }: AnalyticsScreenProps) {
                   <Text style={styles.noTransactionsText}>No transactions for this day.</Text>
                 )}
               </View>
-
-              <View style={styles.netRow}>
-                <Text style={styles.netLabel}>Net this month</Text>
-                <Text style={[styles.netValue, netThisMonth >= 0 ? styles.calendarIncomeText : styles.calendarExpenseText]}>
-                  {netThisMonth >= 0 ? '+' : '-'}{fmtVND(netThisMonth)}
-                </Text>
-              </View>
             </View>
-          </View>
-
-          <View style={styles.helpCard}>
-            <Ionicons name="calendar-outline" size={20} color="#1C4D8D" />
-            <Text style={styles.helpText}>Tap a highlighted date to view that day&apos;s transactions</Text>
           </View>
         </View>
       ) : null}
@@ -1073,9 +1056,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   panelTotal: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#94a3b8',
-    fontWeight: '600',
+    fontWeight: '800',
   },
   categoryGrid: {
     flexDirection: 'column',
@@ -1280,8 +1263,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   calendarDayBubbleSelected: {
-    borderWidth: 2,
-    borderColor: '#1C4D8D',
+    backgroundColor: '#1C4D8D',
+    borderWidth: 0,
+    shadowColor: '#1C4D8D',
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 4,
   },
   calendarIncomeBubble: {
     backgroundColor: '#eefcf0',
@@ -1305,7 +1293,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   calendarSelectedDayText: {
-    color: '#1C4D8D',
+    color: '#ffffff',
   },
   calendarIncomeText: {
     color: '#16a34a',
@@ -1319,39 +1307,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 10,
   },
-  netRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  netLabel: {
-    fontSize: 13,
-    color: '#94a3b8',
-    fontWeight: '700',
-  },
-  netValue: {
-    fontSize: 14,
-    color: '#16a34a',
-    fontWeight: '900',
-  },
-  dayTransactionsHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 6,
-    marginBottom: 8,
-  },
-  dayTransactionsTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#334155',
-  },
-  dayTransactionsSubtitle: {
-    marginTop: 3,
-    fontSize: 12,
-    color: '#94a3b8',
-    fontWeight: '600',
-  },
   selectedDayList: {
     gap: 6,
     marginBottom: 10,
@@ -1359,45 +1314,45 @@ const styles = StyleSheet.create({
   selectedDayItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eef2f7',
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 12,
   },
   selectedDayIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 46,
+    height: 46,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 14,
   },
   selectedDayInfo: {
     flex: 1,
   },
-  selectedDayAmount: {
-    fontSize: 14,
+  selectedDayTransactionTitle: {
+    fontSize: 16,
     fontWeight: '800',
-    marginLeft: 10,
+    color: '#1e293b',
+    marginBottom: 4,
   },
-  selectedDaySection: {
-    backgroundColor: '#fafcff',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#edf2f7',
-    paddingHorizontal: 12,
-    paddingTop: 12,
-    paddingBottom: 10,
-  },
-  selectedDayActionButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 999,
-    backgroundColor: '#fde7f3',
-  },
-  selectedDayActionText: {
+  selectedDayTransactionMeta: {
     fontSize: 13,
+    color: '#94a3b8',
+    fontWeight: '500',
+  },
+  selectedDayAmountWrap: {
+    alignItems: 'flex-end',
+  },
+  selectedDayAmount: {
+    fontSize: 16,
     fontWeight: '800',
-    color: '#ec4899',
+    marginBottom: 4,
+  },
+  selectedDayTransactionCategory: {
+    fontSize: 13,
+    color: '#94a3b8',
+    fontWeight: '500',
   },
   noTransactionsText: {
     fontSize: 14,
@@ -1406,68 +1361,73 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   calendarToolbarRow: {
+    marginBottom: 20,
+  },
+  calendarMonthPicker: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  calendarIconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-  },
-  calendarMonthPicker: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
   },
   calendarMonthNavButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  calendarLegendRow: {
+  netMonthDivider: {
+    height: 1,
+    backgroundColor: '#f1f5f9',
+    marginTop: 24,
+    marginBottom: 16,
+  },
+  netMonthRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  netMonthLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#94a3b8',
+  },
+  netMonthValue: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  selectedDaySection: {
+    marginTop: 28,
+  },
+  selectedDayHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+    paddingHorizontal: 4,
+  },
+  selectedDayTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    gap: 14,
-    marginTop: 8,
+    gap: 8,
   },
-  calendarLegendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  selectedDayTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#334155',
   },
-  calendarLegendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  selectedDaySummary: {
+    alignItems: 'flex-end',
   },
-  calendarLegendText: {
-    fontSize: 12,
-    color: '#6b7280',
-    fontWeight: '600',
+  selectedDayNetAmount: {
+    fontSize: 14,
+    fontWeight: '800',
   },
-  calendarHandleWrap: {
-    alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 6,
-  },
-  calendarHandle: {
-    width: 54,
-    height: 5,
-    borderRadius: 999,
-    backgroundColor: '#dbe3ef',
+  selectedDayNetLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#94a3b8',
+    marginTop: 2,
   },
   helpCard: {
     backgroundColor: '#f5f9ff',
