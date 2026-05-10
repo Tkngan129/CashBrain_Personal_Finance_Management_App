@@ -2,13 +2,15 @@ import { resolveCategoryMeta } from '@/constants/categories';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import {
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
+import Svg, { Circle, G } from 'react-native-svg';
+import { useColors } from '../../context/ThemeContext';
 
 type AnalyticsTab = 'expenses' | 'calendar' | 'overview';
 type RangeTab = 'week' | 'month' | 'year';
@@ -34,29 +36,30 @@ const [calendarMonthDate, setCalendarMonthDate] = useState(new Date(2026, 3, 1))
 const expenseBreakdown = [
   { name: 'Education', amount: 399_000, color: '#b9a2ff' },
   { name: 'Shopping', amount: 250_000, color: '#ffb767' },
-  { name: 'Food', amount: 45_000, color: '#f9a0a0' },
-  { name: 'Transport', amount: 25_000, color: '#f6d84f' },
+  { name: 'Food & Drinks', amount: 45_000, color: '#f9a0a0' },
+  { name: 'Transportation', amount: 25_000, color: '#f6d84f' },
+  { name: 'Bills', amount: 15_000, color: '#4f9cf2' },
 ];
 
 const expenseTransactions = [
-  { id: 1, title: 'Online Course', date: 'Apr 10', time: '2:15 PM', amount: -399_000, category: 'Education', icon: '🎓', color: '#f5f3ff' },
-  { id: 2, title: 'New Clothes', date: 'Apr 9', time: '3:45 PM', amount: -250_000, category: 'Shopping', icon: '🛍️', color: '#fff7ed' },
-  { id: 3, title: 'Coffee & Breakfast', date: 'Apr 11', time: '9:30 AM', amount: -45_000, category: 'Food', icon: '☕', color: '#fff1f2' },
-  { id: 4, title: 'Grab to Uni', date: 'Apr 9', time: '8:30 AM', amount: -25_000, category: 'Transport', icon: '🚗', color: '#fffce8' },
-  { id: 5, title: 'Monthly Allowance', date: 'Apr 30', time: '8:00 AM', amount: 4_000_000, category: 'Income', icon: '💳', color: '#ecfdf5' },
+  { id: 1, title: 'Online Course', date: 'Apr 10', time: '2:15 PM', amount: -399_000, category: 'Education' },
+  { id: 2, title: 'New Clothes', date: 'Apr 9', time: '3:45 PM', amount: -250_000, category: 'Shopping' },
+  { id: 3, title: 'Coffee & Breakfast', date: 'Apr 11', time: '9:30 AM', amount: -45_000, category: 'Food & Drinks' },
+  { id: 4, title: 'Grab to Uni', date: 'Apr 9', time: '8:30 AM', amount: -25_000, category: 'Transportation' },
+  { id: 5, title: 'Monthly Allowance', date: 'Apr 30', time: '8:00 AM', amount: 4_000_000, category: 'Income' },
 ];
 
 const calendarTransactions = [
-  { id: 1, day: 1, title: 'Monthly Allowance', time: '08:00 AM', amount: 4_000_000, category: 'Income', icon: '💳', color: '#ecfdf5' },
-  { id: 2, day: 5, title: 'Coffee & Breakfast', time: '09:30 AM', amount: -45_000, category: 'Food', icon: '☕', color: '#fff1f2' },
-  { id: 3, day: 9, title: 'Grab to Uni', time: '08:30 AM', amount: -25_000, category: 'Transport', icon: '🚗', color: '#fffce8' },
-  { id: 4, day: 9, title: 'New Clothes', time: '03:45 PM', amount: -250_000, category: 'Shopping', icon: '🛍️', color: '#fff7ed' },
-  { id: 5, day: 10, title: 'Online Course', time: '02:15 PM', amount: -399_000, category: 'Education', icon: '🎓', color: '#f5f3ff' },
-  { id: 6, day: 11, title: 'Coffee & Breakfast', time: '09:30 AM', amount: -45_000, category: 'Food', icon: '☕', color: '#fff1f2' },
-  { id: 7, day: 14, title: 'Freelance Bonus', time: '05:20 PM', amount: 180_000, category: 'Income', icon: '🪙', color: '#ecfdf5' },
-  { id: 8, day: 17, title: 'Lunch with friends', time: '12:10 PM', amount: -65_000, category: 'Food', icon: '🍜', color: '#fff1f2' },
-  { id: 9, day: 20, title: 'Utilities refund', time: '10:00 AM', amount: -155_000, category: 'Utilities', icon: '💡', color: '#eff6ff' },
-  { id: 10, day: 23, title: 'Movie night', time: '08:45 PM', amount: -95_000, category: 'Entertainment', icon: '🎬', color: '#f5f3ff' },
+  { id: 1, day: 1, title: 'Monthly Allowance', time: '08:00 AM', amount: 4_000_000, category: 'Income' },
+  { id: 2, day: 5, title: 'Coffee & Breakfast', time: '09:30 AM', amount: -45_000, category: 'Food & Drinks' },
+  { id: 3, day: 9, title: 'Grab to Uni', time: '08:30 AM', amount: -25_000, category: 'Transportation' },
+  { id: 4, day: 9, title: 'New Clothes', time: '03:45 PM', amount: -250_000, category: 'Shopping' },
+  { id: 5, day: 10, title: 'Online Course', time: '02:15 PM', amount: -399_000, category: 'Education' },
+  { id: 6, day: 11, title: 'Coffee & Breakfast', time: '09:30 AM', amount: -45_000, category: 'Food & Drinks' },
+  { id: 7, day: 14, title: 'Freelance Bonus', time: '05:20 PM', amount: 180_000, category: 'Income' },
+  { id: 8, day: 17, title: 'Lunch with friends', time: '12:10 PM', amount: -65_000, category: 'Food & Drinks' },
+  { id: 9, day: 20, title: 'Utilities refund', time: '10:00 AM', amount: -155_000, category: 'Bills' },
+  { id: 10, day: 23, title: 'Movie night', time: '08:45 PM', amount: -95_000, category: 'Entertainment' },
 ];
 
 const calendarDays = [
@@ -130,7 +133,11 @@ const formatCompactMoney = (value: number) => {
   return `${Math.round(value / 1000)}K`;
 };
 
-export function AnalyticsScreen() {
+interface AnalyticsScreenProps {
+  onAddTransaction?: (type: 'expense' | 'income') => void;
+}
+
+export function AnalyticsScreen({ onAddTransaction }: AnalyticsScreenProps) {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('expenses');
   const [rangeTab, setRangeTab] = useState<RangeTab>('month');
   const [draftRangeTab, setDraftRangeTab] = useState<RangeTab>('month');
@@ -144,6 +151,25 @@ export function AnalyticsScreen() {
   const [appliedWeekIndex, setAppliedWeekIndex] = useState(0);
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<number>(1);
   const [showRangePicker, setShowRangePicker] = useState(false);
+  const [overviewActiveMetric, setOverviewActiveMetric] = useState<'expenses' | 'income'>('expenses');
+  const [showAllCategories, setShowAllCategories] = useState(false);
+  const colors = useColors();
+
+  const groupedExpenseTransactions = useMemo(() => {
+    const groups: Record<string, typeof expenseTransactions> = {};
+    expenseTransactions.forEach((tx) => {
+      const key = tx.date;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(tx);
+    });
+    return Object.keys(groups)
+      .sort((a, b) => {
+        const dayA = parseInt(a.replace('Apr ', '')) || 0;
+        const dayB = parseInt(b.replace('Apr ', '')) || 0;
+        return dayB - dayA;
+      })
+      .map((date) => ({ date, items: groups[date] }));
+  }, []);
 
   const getAnalyticsCategoryMeta = (category: string) => resolveCategoryMeta(category);
 
@@ -250,23 +276,51 @@ export function AnalyticsScreen() {
       return;
     }
 
-    setDraftOverviewYearAnchor((current) => current + direction);
-    setDraftOverviewYearWindowStart((current) => current + direction);
+    const newWindowStart = draftOverviewYearWindowStart + direction;
+    setDraftOverviewYearWindowStart(newWindowStart);
+    setDraftOverviewYearAnchor(newWindowStart + 1);
+  };
+
+  const shiftOverviewPeriod = (direction: -1 | 1) => {
+    if (rangeTab === 'week') {
+      let newWeekIndex = appliedWeekIndex + direction;
+      let newMonthAnchor = new Date(overviewMonthAnchor);
+
+      if (newWeekIndex < 0) {
+        newMonthAnchor = new Date(overviewMonthAnchor.getFullYear(), overviewMonthAnchor.getMonth() - 1, 1);
+        const daysInPrevMonth = new Date(newMonthAnchor.getFullYear(), newMonthAnchor.getMonth() + 1, 0).getDate();
+        newWeekIndex = Math.floor((daysInPrevMonth - 1) / 7); 
+      } else {
+        const daysInCurrentMonth = new Date(overviewMonthAnchor.getFullYear(), overviewMonthAnchor.getMonth() + 1, 0).getDate();
+        const maxWeekIndex = Math.floor((daysInCurrentMonth - 1) / 7);
+        if (newWeekIndex > maxWeekIndex) {
+          newMonthAnchor = new Date(overviewMonthAnchor.getFullYear(), overviewMonthAnchor.getMonth() + 1, 1);
+          newWeekIndex = 0;
+        }
+      }
+      setOverviewMonthAnchor(newMonthAnchor);
+      setAppliedWeekIndex(newWeekIndex);
+    } else if (rangeTab === 'year') {
+      setOverviewYearAnchor((y) => y + direction);
+      setOverviewYearWindowStart((y) => y + direction);
+    } else {
+      setOverviewMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() + direction, 1));
+    }
   };
 
   const chartData = useMemo(() => {
     const toAverageTotal = (items: Array<{ date: Date; amount: number }>) => {
-    const expense = items.reduce(
+      const expense = items.reduce(
         (sum, item) => sum + (item.amount < 0 ? Math.abs(item.amount) : 0),
         0
-    );
+      );
 
-    const income = items.reduce(
+      const income = items.reduce(
         (sum, item) => sum + (item.amount > 0 ? item.amount : 0),
         0
-    );
+      );
 
-    return (expense + income);
+      return overviewActiveMetric === 'income' ? income : expense;
     };
 
     const addMonths = (date: Date, offset: number) => new Date(date.getFullYear(), date.getMonth() + offset, 1);
@@ -290,7 +344,7 @@ export function AnalyticsScreen() {
       return {
         label,
         amount: toAverageTotal((entries)),
-    };
+      };
     });
 
     const month = [-1, 0, 1].map((offset) => {
@@ -347,7 +401,7 @@ export function AnalyticsScreen() {
       subtitle: formatMonthYear(overviewMonthAnchor),
       data: month,
     };
-  }, [appliedWeekIndex, overviewMonthAnchor, overviewYearAnchor, overviewYearWindowStart, rangeTab]);
+  }, [appliedWeekIndex, overviewMonthAnchor, overviewYearAnchor, overviewYearWindowStart, rangeTab, overviewActiveMetric]);
 
   const maxChartValue = Math.max(...chartData.data.map((item) => item.amount), 1);
   const chartTopLabels = useMemo(
@@ -375,11 +429,11 @@ export function AnalyticsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <View style={styles.headerCard}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.bg }]} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={[styles.headerCard, { backgroundColor: colors.headerCard }]}>
         <View>
-          <Text style={styles.headerEyebrow}>April 2026</Text>
-          <Text style={styles.headerTitle}>Analytics</Text>
+          <Text style={[styles.headerEyebrow, { color: colors.textMuted }]}>April 2026</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Analytics</Text>
         </View>
         <View style={styles.monthChangePill}>
           <Ionicons name="trending-down-outline" size={16} color="#16a34a" />
@@ -387,7 +441,7 @@ export function AnalyticsScreen() {
         </View>
       </View>
 
-      <View style={styles.tabsRow}>
+      <View style={[styles.tabsRow, { backgroundColor: colors.tabsRow, borderColor: colors.tabBorder }]}>
         {renderTab('expenses', 'Expenses')}
         {renderTab('calendar', 'Calendar')}
         {renderTab('overview', 'Overview')}
@@ -396,17 +450,17 @@ export function AnalyticsScreen() {
       {activeTab === 'expenses' ? (
         <View style={styles.expensesView}>
           <View style={styles.summaryGrid}>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Total Spent</Text>
-              <Text style={styles.summaryValue}>{fmtVND(totalSpent)}</Text>
+            <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
+              <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>Total Spent</Text>
+              <Text style={[styles.summaryValue, { color: colors.text }]}>{fmtVND(totalSpent)}</Text>
               <View style={styles.summaryTrendRow}>
                 <Ionicons name="trending-down-outline" size={14} color="#16a34a" />
                 <Text style={styles.summaryTrendPositive}>31,000 VND less</Text>
               </View>
             </View>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Transactions</Text>
-              <Text style={styles.summaryValue}>4 items</Text>
+            <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
+              <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>Transactions</Text>
+              <Text style={[styles.summaryValue, { color: colors.text }]}>4 items</Text>
               <View style={styles.summaryTrendRow}>
                 <Ionicons name="trending-up-outline" size={14} color="#f97316" />
                 <Text style={styles.summaryTrendOrange}>+0 photo</Text>
@@ -414,61 +468,104 @@ export function AnalyticsScreen() {
             </View>
           </View>
 
-          <View style={styles.panelCard}>
+          <View style={[styles.panelCard, { backgroundColor: colors.card }]}>
             <View style={styles.panelHeaderRow}>
-              <Text style={styles.panelTitle}>Spending by Category</Text>
-              <Text style={styles.panelTotal}>{fmtVND(totalSpent)} total</Text>
+              <Text style={[styles.panelTitle, { color: colors.text }]}>Spending by Category</Text>
+              <Text style={[styles.panelTotal, { color: colors.textMuted }]}>{fmtVND(totalSpent)} total</Text>
             </View>
 
             <View style={styles.categoryGrid}>
               <View style={styles.donutWrap}>
-                <View style={styles.donutOuter}>
-                  <View style={styles.donutInner} />
-                </View>
+                <Svg width="160" height="160" viewBox="0 0 160 160">
+                  <G rotation="-90" origin="80, 80">
+                    {(() => {
+                      const radius = 56;
+                      const strokeWidth = 32;
+                      const circumference = 2 * Math.PI * radius;
+                      let currentOffset = 0;
+
+                      return totalExpensePercentages.map((item, index) => {
+                        const strokeLength = (item.percentage / 100) * circumference;
+                        const offset = -currentOffset;
+                        currentOffset += strokeLength;
+                        return (
+                          <Circle
+                            key={index}
+                            cx="80"
+                            cy="80"
+                            r={radius}
+                            stroke={item.color}
+                            strokeWidth={strokeWidth}
+                            fill="transparent"
+                            strokeDasharray={`${strokeLength} ${circumference}`}
+                            strokeDashoffset={offset}
+                          />
+                        );
+                      });
+                    })()}
+                  </G>
+                </Svg>
               </View>
 
               <View style={styles.categoryList}>
-                {totalExpensePercentages.map((item) => (
+                {(showAllCategories ? totalExpensePercentages : totalExpensePercentages.slice(0, 3)).map((item) => (
                   <View key={item.name} style={styles.categoryItem}>
                     <View style={styles.categoryLineRow}>
                       <View style={[styles.categoryDot, { backgroundColor: item.color }]} />
-                      <Text style={styles.categoryName}>{item.name}</Text>
-                      <Text style={styles.categoryPercent}>{item.percentage.toFixed(1)}%</Text>
+                      <Text style={[styles.categoryName, { color: colors.text }]}>{item.name}</Text>
+                      <Text style={[styles.categoryPercent, { color: colors.textSecondary }]}>{item.percentage.toFixed(1)}%</Text>
                     </View>
-                    <View style={styles.categoryTrack}>
+                    <View style={[styles.categoryTrack, { backgroundColor: colors.border }]}>
                       <View style={[styles.categoryFill, { width: `${item.percentage}%`, backgroundColor: item.color }]} />
                     </View>
                   </View>
                 ))}
+                {totalExpensePercentages.length > 3 && (
+                  <Pressable
+                    style={styles.moreCategoriesButton}
+                    onPress={() => setShowAllCategories(!showAllCategories)}
+                  >
+                    <Text style={[styles.moreCategoriesText, { color: colors.textSecondary }]}>
+                      {showAllCategories ? 'Show less' : `+${totalExpensePercentages.length - 3} more`}
+                    </Text>
+                  </Pressable>
+                )}
               </View>
             </View>
           </View>
 
-          <Text style={styles.sectionHeading}>All Transactions</Text>
+          <Text style={[styles.sectionHeading, { color: colors.sectionHeading }]}>All Transactions</Text>
           <View style={styles.transactionsList}>
-            {expenseTransactions.map((tx) => {
-              const categoryMeta = getAnalyticsCategoryMeta(tx.category);
-              return (
-              <View key={tx.id} style={styles.transactionCard}>
-                <View style={[styles.transactionIcon, { backgroundColor: categoryMeta.bgColor }]}> 
-                  <Ionicons name={categoryMeta.icon as any} size={22} color={categoryMeta.color} />
-                </View>
-                <View style={styles.transactionInfo}>
-                  <Text style={styles.transactionTitle}>{tx.title}</Text>
-                  <Text style={styles.transactionMeta}>{tx.date} · {tx.time}</Text>
-                </View>
-                <View style={styles.transactionAmountWrap}>
-                  <Text style={[
-                    styles.transactionAmount,
-                    tx.amount > 0 ? styles.transactionIncomeAmount : styles.transactionExpenseAmount,
-                  ]}>
-                    {tx.amount > 0 ? '+' : '-'}{fmtVND(tx.amount).replace(' VND', '')}
-                  </Text>
-                  <Text style={styles.transactionCategory}>{categoryMeta.label}</Text>
+            {groupedExpenseTransactions.map((g) => (
+              <View key={g.date} style={styles.groupSection}>
+                <Text style={[styles.groupDate, { color: colors.groupDate }]}>{g.date}</Text>
+                <View style={styles.groupItemsWrap}>
+                  {g.items.map((tx) => {
+                    const categoryMeta = getAnalyticsCategoryMeta(tx.category);
+                    return (
+                      <View key={tx.id} style={[styles.transactionCard, { backgroundColor: colors.transactionCard }]}>
+                        <View style={[styles.transactionIcon, { backgroundColor: categoryMeta.bgColor }]}>
+                          <Ionicons name={categoryMeta.icon as any} size={22} color={categoryMeta.color} />
+                        </View>
+                        <View style={styles.transactionInfo}>
+                          <Text style={[styles.transactionTitle, { color: colors.text }]}>{tx.title}</Text>
+                          <Text style={[styles.transactionMeta, { color: colors.textMuted }]}>{tx.date} · {tx.time}</Text>
+                        </View>
+                        <View style={styles.transactionAmountWrap}>
+                          <Text style={[
+                            styles.transactionAmount,
+                            tx.amount > 0 ? styles.transactionIncomeAmount : styles.transactionExpenseAmount,
+                          ]}>
+                            {tx.amount > 0 ? '+' : '-'}{fmtVND(tx.amount)}
+                          </Text>
+                          <Text style={[styles.transactionCategory, { color: colors.textMuted }]}>{categoryMeta.label}</Text>
+                        </View>
+                      </View>
+                    );
+                  })}
                 </View>
               </View>
-              );
-            })}
+            ))}
           </View>
         </View>
       ) : null}
@@ -486,7 +583,7 @@ export function AnalyticsScreen() {
                   <Ionicons name="chevron-back" size={18} color="#3b3b3b" />
                 </Pressable>
                 <Text style={styles.calendarMonth}>
-                {monthLabels[calendarMonthDate.getMonth()]} {calendarMonthDate.getFullYear()}
+                  {monthLabels[calendarMonthDate.getMonth()]} {calendarMonthDate.getFullYear()}
                 </Text>
                 <Pressable style={styles.calendarMonthNavButton}>
                   <Ionicons name="chevron-forward" size={18} color="#3b3b3b" />
@@ -569,7 +666,7 @@ export function AnalyticsScreen() {
                     {selectedDayData.transactions.length} transaction{selectedDayData.transactions.length === 1 ? '' : 's'}
                   </Text>
                 </View>
-                <Pressable style={styles.selectedDayActionButton}>
+                <Pressable style={styles.selectedDayActionButton} onPress={() => onAddTransaction?.('expense')}>
                   <Text style={styles.selectedDayActionText}>+ Add Transaction</Text>
                 </Pressable>
               </View>
@@ -581,7 +678,7 @@ export function AnalyticsScreen() {
                     const isIncome = tx.amount > 0;
                     return (
                       <View key={tx.id} style={styles.selectedDayItem}>
-                        <View style={[styles.selectedDayIcon, { backgroundColor: categoryMeta.bgColor }]}> 
+                        <View style={[styles.selectedDayIcon, { backgroundColor: categoryMeta.bgColor }]}>
                           <Ionicons name={categoryMeta.icon as any} size={22} color={categoryMeta.color} />
                         </View>
                         <View style={styles.selectedDayInfo}>
@@ -617,102 +714,94 @@ export function AnalyticsScreen() {
 
       {activeTab === 'overview' ? (
         <View style={styles.overviewView}>
-            <View style={styles.overviewHeaderRow}>
-              <View style={styles.overviewHeaderTitleRow}>
-                <Text style={styles.overviewHeaderTitle}>Expense Overview</Text>
-              </View>
+          <View style={styles.overviewHeaderRow}>
+            <View style={styles.overviewHeaderTitleRow}>
+              <Text style={styles.overviewHeaderTitle}>Expense Overview</Text>
             </View>
+          </View>
 
           <View style={styles.overviewCard}>
             <View style={styles.overviewMonthRow}>
-                <Pressable
-                  style={styles.overviewMonthNavButton}
-                  onPress={() => setOverviewMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
-                >
-                  <Ionicons name="chevron-back" size={26} color="#4b5563" />
-                </Pressable>
-                <Pressable style={styles.overviewMonthLabelWrap} onPress={openRangePicker}>
-                  <Ionicons name="calendar-outline" size={18} color="#2b2b2b" />
-                  <Text style={styles.overviewMonthLabel}>{overviewSummary.label}</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.overviewMonthNavButton}
-                  onPress={() => setOverviewMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
-                >
-                  <Ionicons name="chevron-forward" size={26} color="#4b5563" />
-                </Pressable>
+              <Pressable
+                style={styles.overviewMonthNavButton}
+                onPress={() => shiftOverviewPeriod(-1)}
+              >
+                <Ionicons name="chevron-back" size={26} color="#4b5563" />
+              </Pressable>
+              <Pressable style={styles.overviewMonthLabelWrap} onPress={openRangePicker}>
+                <Ionicons name="calendar-outline" size={18} color="#2b2b2b" />
+                <Text style={styles.overviewMonthLabel}>{overviewSummary.label}</Text>
+              </Pressable>
+              <Pressable
+                style={styles.overviewMonthNavButton}
+                onPress={() => shiftOverviewPeriod(1)}
+              >
+                <Ionicons name="chevron-forward" size={26} color="#4b5563" />
+              </Pressable>
             </View>
 
             <View style={styles.overviewSummaryGrid}>
-              <View style={[styles.overviewMetricCard, styles.overviewMetricCardActive]}>
+              <Pressable
+                style={[styles.overviewMetricCard, overviewActiveMetric === 'expenses' && styles.overviewMetricCardActive]}
+                onPress={() => setOverviewActiveMetric('expenses')}
+              >
                 <View style={styles.overviewMetricTitleRow}>
                   <Text style={styles.overviewMetricTitle}>Expenses</Text>
-                  <View style={styles.metricArrowBadge}>
+                  <View style={[styles.metricArrowBadge, { backgroundColor: '#fff1f1' }]}>
                     <Ionicons name="arrow-down" size={14} color="#fe3939" />
                   </View>
                 </View>
                 <Text style={styles.overviewMetricValue}>{fmtVND(overviewSummary.expense)}</Text>
-              </View>
+              </Pressable>
 
-              <View style={styles.overviewMetricCard}>
+              <Pressable
+                style={[styles.overviewMetricCard, overviewActiveMetric === 'income' && styles.overviewMetricCardActive]}
+                onPress={() => setOverviewActiveMetric('income')}
+              >
                 <View style={styles.overviewMetricTitleRow}>
                   <Text style={styles.overviewMetricTitle}>Income</Text>
-                  <View style={styles.metricArrowBadge}>
+                  <View style={[styles.metricArrowBadge, { backgroundColor: '#f0fdf4' }]}>
                     <Ionicons name="arrow-up" size={14} color="#22c55e" />
                   </View>
                 </View>
                 <Text style={styles.overviewMetricValue}>{fmtVND(overviewSummary.income)}</Text>
-              </View>
+              </Pressable>
             </View>
 
             {/* insight removed per request */}
 
-            <View style={styles.overviewChartBlock}>
+            <View style={[styles.overviewChartBlock, { borderColor: colors.chartCardBorder, borderWidth: 1, borderRadius: 16, padding: 8, backgroundColor: colors.barTrackBg }]}>
               <View style={styles.overviewYAxisHeader}>
-                <Text style={styles.overviewYAxisLabel}>(Million VND)</Text>
+                <Text style={[styles.overviewYAxisLabel, { color: colors.chartLabelText }]}>(Million VND)</Text>
               </View>
 
               <View style={styles.barChartWrap}>
                 <View style={styles.yAxisLabels}>
                   {chartTopLabels.map((label) => (
-                    <Text key={label} style={styles.yAxisLabel}>{label}</Text>
+                    <Text key={label} style={[styles.yAxisLabel, { color: colors.chartLabelText }]}>{label}</Text>
                   ))}
                 </View>
                 <View style={styles.barChartArea}>
                   {chartData.data.map((item) => {
                     const height = Math.max(28, Math.round((item.amount / maxChartValue) * 190));
+                    const isActive =
+                      rangeTab === 'week' ||
+                      (rangeTab === 'month' && item.label === chartData.data[1]?.label) ||
+                      (rangeTab === 'year' && item.label === `${overviewYearAnchor}`);
                     return (
                       <View key={item.label} style={styles.barColumn}>
-                        <View style={styles.barTrack}>
-                         <View
-                    style={[
-                    styles.barFill,
-                    {
-                    height,
-                    backgroundColor:
-                    (
-                        // WEEK → all blue
-                        rangeTab === 'week'
-
-                        ||
-
-                        // MONTH → middle only
-                        (rangeTab === 'month' &&
-                        item.label === chartData.data[1]?.label)
-
-                        ||
-
-                        // YEAR → selected year only
-                        (rangeTab === 'year' &&
-                        item.label === `${overviewYearAnchor}`)
-                    )
-                        ? '#214f95'
-                        : '#d1d5db',
-                                        },
-                ]}
-                />
+                        <View style={[styles.barTrack, { backgroundColor: colors.barTrackBg }]}>
+                          <View
+                            style={[
+                              styles.barFill,
+                              {
+                                height,
+                                backgroundColor: isActive ? colors.barFillActive : colors.barFillInactive,
+                              },
+                            ]}
+                          />
                         </View>
-                        <Text style={styles.barMonth}>{item.label}</Text>
+                        <Text style={[styles.barMonth, { color: colors.chartLabelText }]}>{item.label}</Text>
                       </View>
                     );
                   })}
@@ -989,36 +1078,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   categoryGrid: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 18,
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 24,
   },
   donutWrap: {
-    width: 170,
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  donutOuter: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    borderWidth: 26,
-    borderColor: '#b9a2ff',
-    borderRightColor: '#ffb767',
-    borderBottomColor: '#f9a0a0',
-    borderLeftColor: '#ffb767',
-    transform: [{ rotate: '18deg' }],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  donutInner: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    backgroundColor: '#ffffff',
+    paddingTop: 10,
   },
   categoryList: {
-    flex: 1,
     gap: 14,
   },
   categoryItem: {
@@ -1041,8 +1111,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   categoryPercent: {
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '900',
     color: '#334155',
   },
   categoryTrack: {
@@ -1055,14 +1125,36 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 999,
   },
+  moreCategoriesButton: {
+    alignItems: 'center',
+    paddingTop: 8,
+    marginTop: 4,
+  },
+  moreCategoriesText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
   sectionHeading: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '900',
     color: '#334155',
     marginTop: 2,
     marginBottom: 2,
   },
   transactionsList: {
+    gap: 12,
+  },
+  groupSection: {
+    marginBottom: 6,
+  },
+  groupDate: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748b',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  groupItemsWrap: {
     gap: 12,
   },
   transactionCard: {
@@ -1098,9 +1190,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   transactionMeta: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#94a3b8',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   transactionAmountWrap: {
     alignItems: 'flex-end',

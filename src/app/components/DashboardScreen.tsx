@@ -9,6 +9,7 @@ import {
     Text,
     View,
 } from 'react-native';
+import { useColors } from '../../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 const scale = width / 375;
@@ -19,12 +20,12 @@ const REMAINING = TOTAL_BUDGET - TOTAL_SPENT;
 const REMAINING_PCT = Math.round((REMAINING / TOTAL_BUDGET) * 100);
 
 const recentTransactions = [
-  { id: 1, title: 'Coffee & Breakfast', category: 'Food', amount: -45000, date: '2026-05-09', time: '09:30' },
+  { id: 1, title: 'Coffee & Breakfast', category: 'Food & Drinks', amount: -45000, date: '2026-05-09', time: '09:30' },
   { id: 2, title: 'Online Course', category: 'Education', amount: -399000, date: '2026-05-08', time: '14:15' },
   { id: 3, title: 'Monthly Allowance', category: 'Income', amount: 4000000, date: '2026-04-30', time: '08:00' },
-  { id: 4, title: 'Grab to Uni', category: 'Transport', amount: -25000, date: '2026-04-09', time: '08:30' },
+  { id: 4, title: 'Grab to Uni', category: 'Transportation', amount: -25000, date: '2026-04-09', time: '08:30' },
   { id: 5, title: 'New Clothes', category: 'Shopping', amount: -250000, date: '2026-04-09', time: '15:45' },
-  { id: 6, title: 'Coffee & Breakfast', category: 'Food', amount: -45000, date: '2026-04-11', time: '09:30' },
+  { id: 6, title: 'Coffee & Breakfast', category: 'Food & Drinks', amount: -45000, date: '2026-04-11', time: '09:30' },
 ];
 
 const weekData = [
@@ -47,16 +48,16 @@ interface DashboardScreenProps {
 const formatVND = (value: number) => `${new Intl.NumberFormat('vi-VN').format(Math.abs(value))} VND`;
 
 export function DashboardScreen({ onNavigate, onAddTransaction }: DashboardScreenProps) {
-
+  const colors = useColors();
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.bg }]} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={[styles.header, { backgroundColor: colors.bg }]}>
         <View>
-          <Text style={styles.greeting}>Good morning 👋</Text>
-          <Text style={styles.name}>Ngan Tran</Text>
+          <Text style={[styles.greeting, { color: colors.textMuted }]}>Good morning 👋</Text>
+          <Text style={[styles.name, { color: colors.text }]}>Ngan Tran</Text>
         </View>
-        <Pressable style={styles.notificationButton} onPress={() => onNavigate?.('transactions')}>
-          <Ionicons name="notifications-outline" size={20} color="#64748b" />
+        <Pressable style={[styles.notificationButton, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => onNavigate?.('transactions')}>
+          <Ionicons name="notifications-outline" size={20} color={colors.textSecondary} />
         </Pressable>
       </View>
 
@@ -113,57 +114,60 @@ export function DashboardScreen({ onNavigate, onAddTransaction }: DashboardScree
         </Pressable>
       </View>
 
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: colors.card }]}>
         <View style={styles.cardHeaderRow}>
           <View>
-            <Text style={styles.sectionTitle}>April Budget</Text>
-            <Text style={styles.sectionSubtitle}>{formatVND(TOTAL_BUDGET)} total</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>April Budget</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.textMuted }]}>{formatVND(TOTAL_BUDGET)} total</Text>
           </View>
-          <View style={styles.pill}>
-            <Text style={styles.pillText}>{REMAINING_PCT}% left</Text>
+          <View style={[styles.pill, { backgroundColor: colors.pill }]}>
+            <Text style={[styles.pillText, { color: colors.pillText }]}>{REMAINING_PCT}% left</Text>
           </View>
         </View>
-        <View style={styles.progressTrack}>
+        <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
           <View style={[styles.progressFill, { width: `${REMAINING_PCT}%` }]} />
         </View>
-                <View style={styles.budgetSummaryRow}>
-        <View style={styles.summaryBlockLeft}>
-            <Text style={styles.budgetSpent}>
-            {formatVND(TOTAL_SPENT)} spent
+        <View style={styles.budgetSummaryRow}>
+          <View style={styles.summaryBlockLeft}>
+            <Text style={[styles.budgetSpent, { color: colors.textSecondary }]}>
+              {formatVND(TOTAL_SPENT)} spent
             </Text>
-        </View>
-
-        <Text style={styles.budgetDot}>•</Text>
-
-        <View style={styles.summaryBlockRight}>
+          </View>
+          <Text style={[styles.budgetDot, { color: colors.textMuted }]}>•</Text>
+          <View style={styles.summaryBlockRight}>
             <Text style={styles.budgetRemaining}>
-            {formatVND(REMAINING)} remaining
+              {formatVND(REMAINING)} remaining
             </Text>
+          </View>
         </View>
-    </View>
       </View>
 
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.chartCardBorder }]}>
         <View style={styles.cardHeaderRow}>
           <View>
-            <Text style={styles.sectionTitle}>This Week</Text>
-            <Text style={styles.sectionSubtitle}>Daily spending overview</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>This Week</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.textMuted }]}>Daily spending overview</Text>
           </View>
           <Pressable style={styles.linkRow} onPress={() => onNavigate?.('analytics')}>
             <Text style={styles.linkText}>Full report</Text>
             <Ionicons name="chevron-forward" size={16} color="#1C4D8D" />
           </Pressable>
         </View>
-
-        <View style={styles.chartRow}>
+        <View style={[styles.chartRow, { backgroundColor: colors.barTrackBg, borderRadius: 12, padding: 4, marginTop: 4 }]}>
           {weekData.map((item) => {
             const barHeight = Math.max(14, Math.round((item.amount / 80_000) * 102));
             return (
               <View key={item.day} style={styles.chartColumn}>
-                <View style={styles.barTrack}>
-                  <View style={[styles.bar, item.active && styles.barActive, { height: barHeight }]} />
+                <View style={[styles.barTrack, { backgroundColor: 'transparent' }]}>
+                  <View
+                    style={[
+                      styles.bar,
+                      { backgroundColor: item.active ? colors.barFillActive : colors.barFillInactive },
+                      { height: barHeight },
+                    ]}
+                  />
                 </View>
-                <Text style={styles.chartDay}>{item.day}</Text>
+                <Text style={[styles.chartDay, { color: colors.chartLabelText }]}>{item.day}</Text>
               </View>
             );
           })}
@@ -183,13 +187,13 @@ export function DashboardScreen({ onNavigate, onAddTransaction }: DashboardScree
 
       <View>
         <View style={styles.recentHeaderRow}>
-          <Text style={styles.sectionTitle}>Recent Transactions</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Transactions</Text>
           <Pressable onPress={() => onNavigate?.('analytics')}>
             <Text style={styles.linkText}>View all</Text>
           </Pressable>
         </View>
 
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: colors.card }]}>
           {recentTransactions.map((tx, index) => {
             const categoryMeta = resolveCategoryMeta(tx.category);
             return (
@@ -197,17 +201,18 @@ export function DashboardScreen({ onNavigate, onAddTransaction }: DashboardScree
               key={tx.id}
               style={[
                 styles.transactionItem,
+                { borderBottomColor: colors.border },
                 index === recentTransactions.length - 1 && styles.transactionItemLast,
               ]}
             >
-              <View style={[styles.transactionIcon, { backgroundColor: categoryMeta.bgColor }]}> 
+              <View style={[styles.transactionIcon, { backgroundColor: categoryMeta.bgColor }]}>
                 <Ionicons name={categoryMeta.icon as any} size={21} color={categoryMeta.color} />
               </View>
               <View style={styles.transactionInfo}>
-                <Text style={styles.transactionTitle}>{tx.title}</Text>
-                <Text style={styles.transactionCategory}>{categoryMeta.label} · {tx.date} · {tx.time}</Text>
+                <Text style={[styles.transactionTitle, { color: colors.text }]}>{tx.title}</Text>
+                <Text style={[styles.transactionCategory, { color: colors.textMuted }]}>{categoryMeta.label} · {tx.date} · {tx.time}</Text>
               </View>
-              <Text style={[styles.transactionAmount, { color: tx.amount > 0 ? '#1ca34a' : '#ef4444' }]}> 
+              <Text style={[styles.transactionAmount, { color: tx.amount > 0 ? '#1ca34a' : '#ef4444' }]}>
                 {tx.amount > 0 ? '+' : '-'}{formatVND(tx.amount)}
               </Text>
             </View>

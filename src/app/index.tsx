@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
     Pressable,
     StatusBar,
@@ -16,6 +16,7 @@ import { AnalyticsScreen } from './components/AnalyticsScreen';
 import { CameraScreen } from './components/CameraScreen';
 import { DashboardScreen } from './components/DashboardScreen';
 import { ProfileScreen } from './components/ProfileScreen';
+import { ThemeProvider, useColors } from '../context/ThemeContext';
 
 type ScreenId =
 	| 'home'
@@ -43,21 +44,34 @@ const RIGHT_NAV: NavItem[] = [
 ];
 
 export default function App() {
+  return (
+    <ThemeProvider>
+      <AppInner />
+    </ThemeProvider>
+  );
+}
+
+function AppInner() {
+	const colors = useColors();
 	const [activeScreen, setActiveScreen] =
 		useState<ScreenId>('home');
 	const [addTransactionType, setAddTransactionType] =
 		useState<'expense' | 'income'>('expense');
+	const [addTransactionReturnScreen, setAddTransactionReturnScreen] =
+		useState<ScreenId>('home');
 
 	const handleNavigate = (screenId: string) => {
 		setActiveScreen(screenId as ScreenId);
 	};
 
-	const handleAddTransaction = (
+	const handleAddTransaction = useCallback((
 		type: 'expense' | 'income',
+		returnScreen: ScreenId = 'home',
 	) => {
 		setAddTransactionType(type);
+		setAddTransactionReturnScreen(returnScreen);
 		setActiveScreen('add');
-	};
+	}, []);
 
 	const getScreenContent = () => {
 		switch (activeScreen) {
@@ -72,7 +86,11 @@ export default function App() {
 				);
 
 			case 'analytics':
-				return <AnalyticsScreen />;
+				return (
+					<AnalyticsScreen
+						onAddTransaction={(type) => handleAddTransaction(type, 'analytics')}
+					/>
+				);
 
 			case 'transactions':
 				return (
@@ -86,7 +104,7 @@ export default function App() {
 					<AddExpenseScreen
 						initialType={addTransactionType}
 						onClose={() =>
-							setActiveScreen('home')
+							setActiveScreen(addTransactionReturnScreen)
 						}
 					/>
 				);
@@ -157,19 +175,19 @@ export default function App() {
 
 	return (
 		<SafeAreaView
-			style={styles.container}
+			style={[styles.container, { backgroundColor: colors.navBar }]}
 			edges={['top', 'left', 'right']}
 		>
 			<StatusBar
 				barStyle="dark-content"
-				backgroundColor="#ffffff"
+				backgroundColor={colors.navBar}
 			/>
 
-			<View style={styles.contentWrapper}>
+			<View style={[styles.contentWrapper, { backgroundColor: colors.bg }]}>
 				{getScreenContent()}
 			</View>
 
-			<View style={styles.navBar}>
+			<View style={[styles.navBar, { backgroundColor: colors.navBar, borderTopColor: colors.navBorder }]}>
 				{LEFT_NAV.map(renderNavItem)}
 
 				<View style={styles.cameraLabelContainer}>
@@ -199,7 +217,7 @@ export default function App() {
 									activeScreen ===
 									'camera'
 										? '#1C4D8D'
-										: '#94A3B8',
+										: colors.textMuted,
 							},
 						]}
 					>
