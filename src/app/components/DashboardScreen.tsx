@@ -1,6 +1,8 @@
+import { resolveCategoryMeta } from '@/constants/categories';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
+    Dimensions,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -8,18 +10,21 @@ import {
     View,
 } from 'react-native';
 
+const { width } = Dimensions.get('window');
+const scale = width / 375;
+
 const TOTAL_BUDGET = 4_000_000;
 const TOTAL_SPENT = 719_000;
 const REMAINING = TOTAL_BUDGET - TOTAL_SPENT;
 const REMAINING_PCT = Math.round((REMAINING / TOTAL_BUDGET) * 100);
 
 const recentTransactions = [
-  { id: 1, title: 'Coffee & Breakfast', category: 'Food', amount: -45000, date: '2026-05-09', time: '09:30', icon: '☕', color: '#fff1f2' },
-  { id: 2, title: 'Online Course', category: 'Education', amount: -399000, date: '2026-05-08', time: '14:15', icon: '🎓', color: '#f5f3ff' },
-  { id: 3, title: 'Monthly Allowance', category: 'Income', amount: 4000000, date: '2026-04-30', time: '08:00', icon: '💳', color: '#ecfdf5' },
-  { id: 4, title: 'Grab to Uni', category: 'Transport', amount: -25000, date: '2026-04-09', time: '08:30', icon: '🚗', color: '#fffce8' },
-  { id: 5, title: 'New Clothes', category: 'Shopping', amount: -250000, date: '2026-04-09', time: '15:45', icon: '🛍️', color: '#fff7ed' },
-  { id: 6, title: 'Coffee & Breakfast', category: 'Food', amount: -45000, date: '2026-04-11', time: '09:30', icon: '☕', color: '#fff1f2' },
+  { id: 1, title: 'Coffee & Breakfast', category: 'Food', amount: -45000, date: '2026-05-09', time: '09:30' },
+  { id: 2, title: 'Online Course', category: 'Education', amount: -399000, date: '2026-05-08', time: '14:15' },
+  { id: 3, title: 'Monthly Allowance', category: 'Income', amount: 4000000, date: '2026-04-30', time: '08:00' },
+  { id: 4, title: 'Grab to Uni', category: 'Transport', amount: -25000, date: '2026-04-09', time: '08:30' },
+  { id: 5, title: 'New Clothes', category: 'Shopping', amount: -250000, date: '2026-04-09', time: '15:45' },
+  { id: 6, title: 'Coffee & Breakfast', category: 'Food', amount: -45000, date: '2026-04-11', time: '09:30' },
 ];
 
 const weekData = [
@@ -31,6 +36,8 @@ const weekData = [
   { day: 'Sat', amount: 12_000, active: false },
   { day: 'Sun', amount: 9_000, active: false },
 ];
+
+fontSize: 28 * scale
 
 interface DashboardScreenProps {
   onNavigate?: (screen: string) => void;
@@ -67,7 +74,7 @@ export function DashboardScreen({ onNavigate, onAddTransaction }: DashboardScree
             </View>
           </View>
           <View style={styles.walletBadge}>
-            <Ionicons name="wallet-outline" size={25} color="#ffffff" />
+            <Ionicons name="wallet-outline" size={21} color="#ffffff" />
           </View>
         </View>
 
@@ -119,11 +126,21 @@ export function DashboardScreen({ onNavigate, onAddTransaction }: DashboardScree
         <View style={styles.progressTrack}>
           <View style={[styles.progressFill, { width: `${REMAINING_PCT}%` }]} />
         </View>
-        <Text style={styles.budgetSummary}>
-          <Text style={styles.budgetSpent}>{formatVND(TOTAL_SPENT)} spent</Text>
-          <Text style={styles.budgetDot}>  •  </Text>
-          <Text style={styles.budgetRemaining}>{formatVND(REMAINING)} remaining</Text>
-        </Text>
+                <View style={styles.budgetSummaryRow}>
+        <View style={styles.summaryBlockLeft}>
+            <Text style={styles.budgetSpent}>
+            {formatVND(TOTAL_SPENT)} spent
+            </Text>
+        </View>
+
+        <Text style={styles.budgetDot}>•</Text>
+
+        <View style={styles.summaryBlockRight}>
+            <Text style={styles.budgetRemaining}>
+            {formatVND(REMAINING)} remaining
+            </Text>
+        </View>
+    </View>
       </View>
 
       <View style={styles.card}>
@@ -173,7 +190,9 @@ export function DashboardScreen({ onNavigate, onAddTransaction }: DashboardScree
         </View>
 
         <View style={styles.card}>
-          {recentTransactions.map((tx, index) => (
+          {recentTransactions.map((tx, index) => {
+            const categoryMeta = resolveCategoryMeta(tx.category);
+            return (
             <View
               key={tx.id}
               style={[
@@ -181,18 +200,19 @@ export function DashboardScreen({ onNavigate, onAddTransaction }: DashboardScree
                 index === recentTransactions.length - 1 && styles.transactionItemLast,
               ]}
             >
-              <View style={[styles.transactionIcon, { backgroundColor: tx.color }]}> 
-                <Text style={styles.transactionEmoji}>{tx.icon}</Text>
+              <View style={[styles.transactionIcon, { backgroundColor: categoryMeta.bgColor }]}> 
+                <Ionicons name={categoryMeta.icon as any} size={21} color={categoryMeta.color} />
               </View>
               <View style={styles.transactionInfo}>
                 <Text style={styles.transactionTitle}>{tx.title}</Text>
-                <Text style={styles.transactionCategory}>{tx.category} · {tx.date} · {tx.time}</Text>
+                <Text style={styles.transactionCategory}>{categoryMeta.label} · {tx.date} · {tx.time}</Text>
               </View>
               <Text style={[styles.transactionAmount, { color: tx.amount > 0 ? '#1ca34a' : '#ef4444' }]}> 
                 {tx.amount > 0 ? '+' : '-'}{formatVND(tx.amount)}
               </Text>
             </View>
-          ))}
+            );
+          })}
         </View>
 
         {/* All transactions are now on their own screen (navigated via bell) */}
@@ -207,7 +227,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#eef3f8',
   },
   content: {
-    paddingHorizontal: 18,
+    paddingHorizontal: 14,
     paddingTop: 10,
     paddingBottom: 24,
     gap: 14,
@@ -226,8 +246,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   name: {
-    fontSize: 28,
-    lineHeight: 32,
+    fontSize: 24,
+    lineHeight: 28,
     fontWeight: '800',
     color: '#1e293b',
   },
@@ -242,7 +262,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   balanceCard: {
-    minHeight: 324,
+    minHeight: 280,
     backgroundColor: '#255ca7',
     borderRadius: 28,
     overflow: 'hidden',
@@ -285,12 +305,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   balanceAmount: {
-    fontSize: 39,
-    lineHeight: 44,
-    fontWeight: '900',
-    color: '#ffffff',
-    letterSpacing: -0.4,
-    marginBottom: 10,
+  fontSize: 31,
+  lineHeight: 36,
+  fontWeight: '900',
+  color: '#ffffff',
+  letterSpacing: -0.3,
+  marginBottom: 6,
   },
   trendRow: {
     flexDirection: 'row',
@@ -341,8 +361,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   statAmount: {
-    fontSize: 24,
-    lineHeight: 28,
+    fontSize: 18,
+    lineHeight: 22,
     fontWeight: '900',
     color: '#ffffff',
   },
@@ -387,7 +407,7 @@ const styles = StyleSheet.create({
     borderColor: '#bbf7d0',
   },
   quickActionText: {
-    fontSize: 17,
+    fontSize: 14,
     lineHeight: 20,
     fontWeight: '800',
     color: '#ffffff',
@@ -412,54 +432,71 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
     color: '#1e293b',
   },
   sectionSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#94a3b8',
-    marginTop: 4,
+    marginTop: 2,
     fontWeight: '500',
   },
   pill: {
-    backgroundColor: '#e8efff',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 18,
+    backgroundColor: '#eef2ff',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    justifyContent: 'center',
   },
   pillText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: '#1C4D8D',
   },
   progressTrack: {
-    height: 12,
+    height: 8,
     backgroundColor: '#e2e8f0',
     borderRadius: 999,
     overflow: 'hidden',
-    marginTop: 18,
-    marginBottom: 12,
+    marginTop: 14,
+    marginBottom: 14,
   },
   progressFill: {
     height: '100%',
     backgroundColor: '#8dc7df',
     borderRadius: 999,
   },
-  budgetSummary: {
-    fontSize: 15,
-    lineHeight: 20,
+  budgetSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 6,
   },
+  summaryBlockLeft: {
+    flex: 1,
+},
+    summaryBlockRight: {
+  flex: 1,
+  alignItems: 'flex-end',
+},
   budgetSpent: {
     color: '#64748b',
     fontWeight: '600',
+    fontSize: 13,
+    lineHeight: 18,
   },
   budgetDot: {
     color: '#cbd5e1',
+    marginHorizontal: 8,
+    fontSize: 12,
+    marginTop: 2,
   },
   budgetRemaining: {
     color: '#1C4D8D',
     fontWeight: '800',
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'right',
   },
   linkRow: {
     flexDirection: 'row',
@@ -472,7 +509,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   chartRow: {
-    height: 190,
+    height: 170,
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
@@ -544,7 +581,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   transactionItem: {
-    minHeight: 96,
+    minHeight: 78,
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
@@ -562,9 +599,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-  },
-  transactionEmoji: {
-    fontSize: 22,
   },
   transactionInfo: {
     flex: 1,
@@ -633,4 +667,5 @@ const styles = StyleSheet.create({
     color: '#64748b',
     marginBottom: 8,
   },
+  
 });

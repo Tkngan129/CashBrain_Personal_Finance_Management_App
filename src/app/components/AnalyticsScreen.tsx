@@ -1,6 +1,8 @@
+import { resolveCategoryMeta } from '@/constants/categories';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import {
+    Modal,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -14,9 +16,20 @@ type RangeTab = 'week' | 'month' | 'year';
 const fmtVND = (value: number) =>
   `${new Intl.NumberFormat('vi-VN').format(Math.abs(value))} VND`;
 
+const formatCalendarAmount = (value: number) => {
+  const absValue = Math.abs(value);
+  if (absValue >= 1_000_000) {
+    return `${(absValue / 1_000_000).toFixed(absValue % 1_000_000 === 0 ? 0 : 1)}M`;
+  }
+  return `${Math.round(absValue / 1000)}K`;
+};
+
 const totalSpent = 719_000;
 const totalIncome = 4_000_000;
 const netThisMonth = 2_741_000;
+
+const [showRangePicker, setShowRangePicker] = useState(false);
+const [calendarMonthDate, setCalendarMonthDate] = useState(new Date(2026, 3, 1));
 
 const expenseBreakdown = [
   { name: 'Education', amount: 399_000, color: '#b9a2ff' },
@@ -30,6 +43,20 @@ const expenseTransactions = [
   { id: 2, title: 'New Clothes', date: 'Apr 9', time: '3:45 PM', amount: -250_000, category: 'Shopping', icon: '🛍️', color: '#fff7ed' },
   { id: 3, title: 'Coffee & Breakfast', date: 'Apr 11', time: '9:30 AM', amount: -45_000, category: 'Food', icon: '☕', color: '#fff1f2' },
   { id: 4, title: 'Grab to Uni', date: 'Apr 9', time: '8:30 AM', amount: -25_000, category: 'Transport', icon: '🚗', color: '#fffce8' },
+  { id: 5, title: 'Monthly Allowance', date: 'Apr 30', time: '8:00 AM', amount: 4_000_000, category: 'Income', icon: '💳', color: '#ecfdf5' },
+];
+
+const calendarTransactions = [
+  { id: 1, day: 1, title: 'Monthly Allowance', time: '08:00 AM', amount: 4_000_000, category: 'Income', icon: '💳', color: '#ecfdf5' },
+  { id: 2, day: 5, title: 'Coffee & Breakfast', time: '09:30 AM', amount: -45_000, category: 'Food', icon: '☕', color: '#fff1f2' },
+  { id: 3, day: 9, title: 'Grab to Uni', time: '08:30 AM', amount: -25_000, category: 'Transport', icon: '🚗', color: '#fffce8' },
+  { id: 4, day: 9, title: 'New Clothes', time: '03:45 PM', amount: -250_000, category: 'Shopping', icon: '🛍️', color: '#fff7ed' },
+  { id: 5, day: 10, title: 'Online Course', time: '02:15 PM', amount: -399_000, category: 'Education', icon: '🎓', color: '#f5f3ff' },
+  { id: 6, day: 11, title: 'Coffee & Breakfast', time: '09:30 AM', amount: -45_000, category: 'Food', icon: '☕', color: '#fff1f2' },
+  { id: 7, day: 14, title: 'Freelance Bonus', time: '05:20 PM', amount: 180_000, category: 'Income', icon: '🪙', color: '#ecfdf5' },
+  { id: 8, day: 17, title: 'Lunch with friends', time: '12:10 PM', amount: -65_000, category: 'Food', icon: '🍜', color: '#fff1f2' },
+  { id: 9, day: 20, title: 'Utilities refund', time: '10:00 AM', amount: -155_000, category: 'Utilities', icon: '💡', color: '#eff6ff' },
+  { id: 10, day: 23, title: 'Movie night', time: '08:45 PM', amount: -95_000, category: 'Entertainment', icon: '🎬', color: '#f5f3ff' },
 ];
 
 const calendarDays = [
@@ -65,18 +92,60 @@ const calendarDays = [
   { day: 30 },
 ];
 
-const monthlyBars = [
-  { month: 'Nov', amount: 920_000 },
-  { month: 'Dec', amount: 880_000 },
-  { month: 'Jan', amount: 850_000 },
-  { month: 'Feb', amount: 920_000 },
-  { month: 'Mar', amount: 770_000 },
-  { month: 'Apr', amount: 740_000 },
+const overviewTransactions = [
+  { date: new Date(2024, 11, 12), amount: -260_000 },
+  { date: new Date(2024, 11, 21), amount: 820_000 },
+  { date: new Date(2025, 0, 7), amount: -400_000 },
+  { date: new Date(2025, 0, 15), amount: -150_000 },
+  { date: new Date(2025, 1, 4), amount: -1_843_000 },
+  { date: new Date(2025, 1, 12), amount: 1_281_835 },
+  { date: new Date(2025, 1, 20), amount: -230_000 },
+  { date: new Date(2025, 1, 28), amount: 450_000 },
+  { date: new Date(2025, 2, 6), amount: -320_000 },
+  { date: new Date(2025, 3, 7), amount: -45_000 },
+  { date: new Date(2025, 3, 8), amount: -250_000 },
+  { date: new Date(2025, 3, 9), amount: -25_000 },
+  { date: new Date(2025, 3, 10), amount: -399_000 },
+  { date: new Date(2025, 3, 11), amount: -45_000 },
+  { date: new Date(2025, 3, 12), amount: 180_000 },
+  { date: new Date(2026, 3, 7), amount: -45_000 },
+  { date: new Date(2026, 4, 4), amount: -65_000 },
+  { date: new Date(2026, 5, 15), amount: -95_000 },
+  { date: new Date(2026, 6, 10), amount: -155_000 },
+  { date: new Date(2026, 7, 21), amount: -120_000 },
+  { date: new Date(2026, 8, 9), amount: -175_000 },
+  { date: new Date(2026, 9, 2), amount: -85_000 },
+  { date: new Date(2026, 10, 18), amount: -140_000 },
+  { date: new Date(2026, 11, 12), amount: 4_000_000 },
 ];
+
+const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const formatCompactMoney = (value: number) => {
+  if (value >= 1_000_000) {
+    return `${(value / 1_000_000).toFixed(value % 1_000_000 === 0 ? 0 : 1)}M`;
+  }
+
+  return `${Math.round(value / 1000)}K`;
+};
 
 export function AnalyticsScreen() {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('expenses');
   const [rangeTab, setRangeTab] = useState<RangeTab>('month');
+  const [draftRangeTab, setDraftRangeTab] = useState<RangeTab>('month');
+  const [overviewMonthAnchor, setOverviewMonthAnchor] = useState(new Date(2025, 1, 1));
+  const [draftOverviewMonthAnchor, setDraftOverviewMonthAnchor] = useState(new Date(2025, 1, 1));
+  const [overviewYearAnchor, setOverviewYearAnchor] = useState(2025);
+  const [draftOverviewYearAnchor, setDraftOverviewYearAnchor] = useState(2025);
+  const [overviewYearWindowStart, setOverviewYearWindowStart] = useState(2024);
+  const [draftOverviewYearWindowStart, setDraftOverviewYearWindowStart] = useState(2024);
+  const [draftWeekIndex, setDraftWeekIndex] = useState(0);
+  const [appliedWeekIndex, setAppliedWeekIndex] = useState(0);
+  const [selectedCalendarDay, setSelectedCalendarDay] = useState<number>(1);
+  const [showRangePicker, setShowRangePicker] = useState(false);
+
+  const getAnalyticsCategoryMeta = (category: string) => resolveCategoryMeta(category);
 
   const totalExpensePercentages = useMemo(() => {
     const total = expenseBreakdown.reduce((sum, item) => sum + item.amount, 0);
@@ -85,6 +154,206 @@ export function AnalyticsScreen() {
       percentage: (item.amount / total) * 100,
     }));
   }, []);
+
+  const calendarDayData = useMemo(() => {
+    return Array.from({ length: 30 }, (_, index) => {
+      const day = index + 1;
+      const transactions = calendarTransactions.filter((tx) => tx.day === day);
+      const total = transactions.reduce((sum, tx) => sum + tx.amount, 0);
+      return {
+        day,
+        transactions,
+        total,
+        hasTransactions: transactions.length > 0,
+      };
+    });
+  }, []);
+
+  const selectedDayData = useMemo(
+    () => calendarDayData.find((item) => item.day === selectedCalendarDay) ?? calendarDayData[0],
+    [calendarDayData, selectedCalendarDay],
+  );
+
+  const overviewSummary = useMemo(() => {
+    const formatMonthYear = (date: Date) => `${monthLabels[date.getMonth()]} ${date.getFullYear()}`;
+
+    const monthStart = new Date(overviewMonthAnchor.getFullYear(), overviewMonthAnchor.getMonth(), 1);
+    const monthEnd = new Date(overviewMonthAnchor.getFullYear(), overviewMonthAnchor.getMonth() + 1, 0);
+
+    const weekStart = new Date(
+      overviewMonthAnchor.getFullYear(),
+      overviewMonthAnchor.getMonth(),
+      1 + appliedWeekIndex * 7,
+    );
+    const weekEnd = new Date(
+      overviewMonthAnchor.getFullYear(),
+      overviewMonthAnchor.getMonth(),
+      Math.min(
+        7 + appliedWeekIndex * 7,
+        new Date(overviewMonthAnchor.getFullYear(), overviewMonthAnchor.getMonth() + 1, 0).getDate(),
+      ),
+    );
+
+    const yearStart = new Date(overviewYearAnchor, 0, 1);
+    const yearEnd = new Date(overviewYearAnchor, 11, 31);
+
+    const [periodStart, periodEnd, label] = rangeTab === 'week'
+      ? [weekStart, weekEnd, `Week ${appliedWeekIndex + 1}: day ${weekStart.getDate()} - day ${weekEnd.getDate()}`]
+      : rangeTab === 'year'
+        ? [yearStart, yearEnd, `Year ${overviewYearAnchor}`]
+        : [monthStart, monthEnd, formatMonthYear(overviewMonthAnchor)];
+
+    const inPeriod = overviewTransactions.filter((item) => item.date >= periodStart && item.date <= periodEnd);
+    const expense = inPeriod.reduce((sum, item) => sum + (item.amount < 0 ? Math.abs(item.amount) : 0), 0);
+    const income = inPeriod.reduce((sum, item) => sum + (item.amount > 0 ? item.amount : 0), 0);
+
+    return {
+      label,
+      expense,
+      income,
+    };
+  }, [appliedWeekIndex, overviewMonthAnchor, overviewYearAnchor, rangeTab]);
+
+  const openRangePicker = () => {
+    setDraftRangeTab(rangeTab);
+    setDraftOverviewMonthAnchor(overviewMonthAnchor);
+    setDraftOverviewYearAnchor(overviewYearAnchor);
+    setDraftOverviewYearWindowStart(overviewYearWindowStart);
+    setDraftWeekIndex(appliedWeekIndex);
+    setShowRangePicker(true);
+  };
+
+  const handleRangePickerApply = () => {
+    setRangeTab(draftRangeTab);
+    setOverviewMonthAnchor(draftOverviewMonthAnchor);
+    setOverviewYearAnchor(draftOverviewYearAnchor);
+    setOverviewYearWindowStart(draftOverviewYearWindowStart);
+    setAppliedWeekIndex(draftWeekIndex);
+    setShowRangePicker(false);
+  };
+
+  const handleRangePickerReset = () => {
+    setDraftRangeTab('month');
+    setDraftOverviewMonthAnchor(new Date(2025, 1, 1));
+    setDraftOverviewYearAnchor(2025);
+    setDraftOverviewYearWindowStart(2024);
+  };
+
+  const shiftDraftPeriod = (direction: -1 | 1) => {
+    if (draftRangeTab === 'week') {
+      setDraftOverviewMonthAnchor((current) => new Date(current.getFullYear(), current.getMonth() + direction, 1));
+      return;
+    }
+
+    if (draftRangeTab === 'month') {
+      setDraftOverviewMonthAnchor((current) => new Date(current.getFullYear(), current.getMonth() + direction, 1));
+      return;
+    }
+
+    setDraftOverviewYearAnchor((current) => current + direction);
+    setDraftOverviewYearWindowStart((current) => current + direction);
+  };
+
+  const chartData = useMemo(() => {
+    const toAverageTotal = (items: Array<{ date: Date; amount: number }>) => {
+    const expense = items.reduce(
+        (sum, item) => sum + (item.amount < 0 ? Math.abs(item.amount) : 0),
+        0
+    );
+
+    const income = items.reduce(
+        (sum, item) => sum + (item.amount > 0 ? item.amount : 0),
+        0
+    );
+
+    return (expense + income);
+    };
+
+    const addMonths = (date: Date, offset: number) => new Date(date.getFullYear(), date.getMonth() + offset, 1);
+    const formatMonthYear = (date: Date) => {
+      const month = monthLabels[date.getMonth()];
+      return `${month} ${date.getFullYear()}`;
+    };
+
+    const weekStart = new Date(overviewMonthAnchor.getFullYear(), overviewMonthAnchor.getMonth(), 1 + appliedWeekIndex * 7);
+    const weekEnd = new Date(overviewMonthAnchor.getFullYear(), overviewMonthAnchor.getMonth(), Math.min(7 + appliedWeekIndex * 7, new Date(overviewMonthAnchor.getFullYear(), overviewMonthAnchor.getMonth() + 1, 0).getDate()));
+
+    const week = weekdayLabels.map((label, index) => {
+      const dayOfWeek = index === 6 ? 0 : index + 1;
+      const entries = overviewTransactions.filter(
+        (item) =>
+          item.date >= weekStart &&
+          item.date <= weekEnd &&
+          item.date.getDay() === dayOfWeek,
+      );
+
+      return {
+        label,
+        amount: toAverageTotal((entries)),
+    };
+    });
+
+    const month = [-1, 0, 1].map((offset) => {
+      const monthDate = addMonths(overviewMonthAnchor, offset);
+      const entries = overviewTransactions.filter(
+        (item) =>
+          item.date.getFullYear() === monthDate.getFullYear() &&
+          item.date.getMonth() === monthDate.getMonth(),
+      );
+
+      return {
+        label: formatMonthYear(monthDate),
+        amount: toAverageTotal(entries),
+      };
+    });
+
+    const yearly = Array.from({ length: 3 }, (_, index) => {
+      const yearValue = overviewYearWindowStart + index;
+      return {
+        label: `${yearValue}`,
+        amount: toAverageTotal(overviewTransactions.filter((item) => item.date.getFullYear() === yearValue)),
+      };
+    });
+
+    const year = monthLabels.map((label, monthIndex) => {
+      const entries = overviewTransactions.filter(
+        (item) => item.date.getFullYear() === overviewYearAnchor && item.date.getMonth() === monthIndex,
+      );
+
+      return {
+        label,
+        amount: toAverageTotal(entries),
+      };
+    });
+
+    if (rangeTab === 'week') {
+      return {
+        title: 'Weekly Expenses',
+        subtitle: formatMonthYear(overviewMonthAnchor),
+        data: week,
+      };
+    }
+
+    if (rangeTab === 'year') {
+      return {
+        title: 'Yearly Expenses',
+        subtitle: `${overviewYearWindowStart} - ${overviewYearWindowStart + 2}`,
+        data: yearly,
+      };
+    }
+
+    return {
+      title: 'Monthly Expenses',
+      subtitle: formatMonthYear(overviewMonthAnchor),
+      data: month,
+    };
+  }, [appliedWeekIndex, overviewMonthAnchor, overviewYearAnchor, overviewYearWindowStart, rangeTab]);
+
+  const maxChartValue = Math.max(...chartData.data.map((item) => item.amount), 1);
+  const chartTopLabels = useMemo(
+    () => [4, 3, 2, 1, 0].map((step) => formatCompactMoney((maxChartValue * step) / 4)),
+    [maxChartValue],
+  );
 
   const renderTab = (tab: AnalyticsTab, label: string) => {
     const isActive = activeTab === tab;
@@ -97,9 +366,9 @@ export function AnalyticsScreen() {
   };
 
   const renderRangeTab = (tab: RangeTab, label: string) => {
-    const isActive = rangeTab === tab;
+    const isActive = draftRangeTab === tab;
     return (
-      <Pressable key={tab} onPress={() => setRangeTab(tab)} style={[styles.rangeTab, isActive && styles.rangeTabActive]}>
+      <Pressable key={tab} onPress={() => setDraftRangeTab(tab)} style={[styles.rangeTab, isActive && styles.rangeTabActive]}>
         <Text style={[styles.rangeText, isActive && styles.rangeTextActive]}>{label}</Text>
       </Pressable>
     );
@@ -177,21 +446,29 @@ export function AnalyticsScreen() {
 
           <Text style={styles.sectionHeading}>All Transactions</Text>
           <View style={styles.transactionsList}>
-            {expenseTransactions.map((tx) => (
+            {expenseTransactions.map((tx) => {
+              const categoryMeta = getAnalyticsCategoryMeta(tx.category);
+              return (
               <View key={tx.id} style={styles.transactionCard}>
-                <View style={[styles.transactionIcon, { backgroundColor: tx.color }]}>
-                  <Text style={styles.transactionEmoji}>{tx.icon}</Text>
+                <View style={[styles.transactionIcon, { backgroundColor: categoryMeta.bgColor }]}> 
+                  <Ionicons name={categoryMeta.icon as any} size={22} color={categoryMeta.color} />
                 </View>
                 <View style={styles.transactionInfo}>
                   <Text style={styles.transactionTitle}>{tx.title}</Text>
                   <Text style={styles.transactionMeta}>{tx.date} · {tx.time}</Text>
                 </View>
                 <View style={styles.transactionAmountWrap}>
-                  <Text style={styles.transactionAmount}>{fmtVND(tx.amount).replace(' VND', '')}</Text>
-                  <Text style={styles.transactionCategory}>{tx.category}</Text>
+                  <Text style={[
+                    styles.transactionAmount,
+                    tx.amount > 0 ? styles.transactionIncomeAmount : styles.transactionExpenseAmount,
+                  ]}>
+                    {tx.amount > 0 ? '+' : '-'}{fmtVND(tx.amount).replace(' VND', '')}
+                  </Text>
+                  <Text style={styles.transactionCategory}>{categoryMeta.label}</Text>
                 </View>
               </View>
-            ))}
+              );
+            })}
           </View>
         </View>
       ) : null}
@@ -199,13 +476,25 @@ export function AnalyticsScreen() {
       {activeTab === 'calendar' ? (
         <View style={styles.calendarView}>
           <View style={styles.calendarCard}>
-            <View style={styles.calendarHeaderRow}>
-              <Pressable style={styles.calendarNavButton}>
-                <Ionicons name="chevron-back" size={22} color="#64748b" />
+            <View style={styles.calendarToolbarRow}>
+              <Pressable style={styles.calendarIconButton}>
+                <Ionicons name="eye-outline" size={22} color="#3b3b3b" />
               </Pressable>
-              <Text style={styles.calendarMonth}>April 2026</Text>
-              <Pressable style={styles.calendarNavButton}>
-                <Ionicons name="chevron-forward" size={22} color="#64748b" />
+
+              <View style={styles.calendarMonthPicker}>
+                <Pressable style={styles.calendarMonthNavButton}>
+                  <Ionicons name="chevron-back" size={18} color="#3b3b3b" />
+                </Pressable>
+                <Text style={styles.calendarMonth}>
+                {monthLabels[calendarMonthDate.getMonth()]} {calendarMonthDate.getFullYear()}
+                </Text>
+                <Pressable style={styles.calendarMonthNavButton}>
+                  <Ionicons name="chevron-forward" size={18} color="#3b3b3b" />
+                </Pressable>
+              </View>
+
+              <Pressable style={styles.calendarIconButton}>
+                <Ionicons name="filter-outline" size={22} color="#3b3b3b" />
               </Pressable>
             </View>
 
@@ -216,29 +505,106 @@ export function AnalyticsScreen() {
             </View>
 
             <View style={styles.calendarGrid}>
-              {calendarDays.map((item, index) => {
-                const isHighlighted = Boolean(item.badge);
-                const isIncome = item.type === 'income';
+              {calendarDayData.map((item) => {
+                const isHighlighted = item.hasTransactions;
+                const isIncome = item.total > 0;
+                const isSelected = selectedCalendarDay === item.day;
+                const hasAmount = item.hasTransactions;
                 return (
-                  <View key={`${item.day}-${index}`} style={styles.calendarCell}>
-                    {item.day <= 30 ? (
-                      <View style={[styles.calendarDayBubble, isHighlighted && (isIncome ? styles.calendarIncomeBubble : styles.calendarExpenseBubble)]}>
-                        <Text style={[styles.calendarDayNumber, isHighlighted && (isIncome ? styles.calendarIncomeText : styles.calendarExpenseText)]}>{item.day}</Text>
-                        {item.badge ? (
-                          <Text style={[styles.calendarBadge, isIncome ? styles.calendarIncomeText : styles.calendarExpenseText]}>{item.badge}</Text>
-                        ) : null}
-                      </View>
-                    ) : null}
-                  </View>
+                  <Pressable
+                    key={item.day}
+                    style={styles.calendarCell}
+                    onPress={() => setSelectedCalendarDay(item.day)}
+                  >
+                    <View style={[
+                      styles.calendarDayBubble,
+                      isHighlighted && (isIncome ? styles.calendarIncomeBubble : styles.calendarExpenseBubble),
+                      isSelected && styles.calendarDayBubbleSelected,
+                    ]}>
+                      <Text style={[
+                        styles.calendarDayNumber,
+                        isHighlighted && (isIncome ? styles.calendarIncomeText : styles.calendarExpenseText),
+                        isSelected && styles.calendarSelectedDayText,
+                      ]}>{item.day}</Text>
+
+                      {hasAmount ? (
+                        <Text style={[
+                          styles.calendarBubbleAmount,
+                          item.total > 0 ? styles.calendarIncomeText : styles.calendarExpenseText,
+                        ]}>
+                          {item.total > 0 ? '+' : '-'}{formatCalendarAmount(item.total)}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </Pressable>
                 );
               })}
             </View>
 
-            <View style={styles.calendarDivider} />
+            <View style={styles.calendarLegendRow}>
+              <View style={styles.calendarLegendItem}>
+                <View style={[styles.calendarLegendDot, { backgroundColor: '#16a34a' }]} />
+                <Text style={styles.calendarLegendText}>Income</Text>
+              </View>
+              <View style={styles.calendarLegendItem}>
+                <View style={[styles.calendarLegendDot, { backgroundColor: '#2f3135' }]} />
+                <Text style={styles.calendarLegendText}>Expense</Text>
+              </View>
+              <View style={styles.calendarLegendItem}>
+                <View style={[styles.calendarLegendDot, { backgroundColor: '#ef4444' }]} />
+                <Text style={styles.calendarLegendText}>Unusual High Expense</Text>
+                <Ionicons name="information-circle-outline" size={14} color="#6b7280" />
+              </View>
+            </View>
 
-            <View style={styles.netRow}>
-              <Text style={styles.netLabel}>Net this month</Text>
-              <Text style={styles.netValue}>{`+${fmtVND(netThisMonth)}`}</Text>
+            <View style={styles.calendarHandleWrap}>
+              <View style={styles.calendarHandle} />
+            </View>
+
+            <View style={styles.selectedDaySection}>
+              <View style={styles.dayTransactionsHeaderRow}>
+                <View>
+                  <Text style={styles.dayTransactionsTitle}>Transaction List</Text>
+                  <Text style={styles.dayTransactionsSubtitle}>
+                    {selectedDayData.transactions.length} transaction{selectedDayData.transactions.length === 1 ? '' : 's'}
+                  </Text>
+                </View>
+                <Pressable style={styles.selectedDayActionButton}>
+                  <Text style={styles.selectedDayActionText}>+ Add Transaction</Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.selectedDayList}>
+                {selectedDayData.transactions.length > 0 ? (
+                  selectedDayData.transactions.map((tx) => {
+                    const categoryMeta = getAnalyticsCategoryMeta(tx.category);
+                    const isIncome = tx.amount > 0;
+                    return (
+                      <View key={tx.id} style={styles.selectedDayItem}>
+                        <View style={[styles.selectedDayIcon, { backgroundColor: categoryMeta.bgColor }]}> 
+                          <Ionicons name={categoryMeta.icon as any} size={22} color={categoryMeta.color} />
+                        </View>
+                        <View style={styles.selectedDayInfo}>
+                          <Text style={styles.transactionTitle}>{tx.title}</Text>
+                          <Text style={styles.transactionMeta}>{categoryMeta.label} · {tx.time}</Text>
+                        </View>
+                        <Text style={[styles.selectedDayAmount, isIncome ? styles.calendarIncomeText : styles.calendarExpenseText]}>
+                          {isIncome ? '+' : '-'}{fmtVND(tx.amount)}
+                        </Text>
+                      </View>
+                    );
+                  })
+                ) : (
+                  <Text style={styles.noTransactionsText}>No transactions for this day.</Text>
+                )}
+              </View>
+
+              <View style={styles.netRow}>
+                <Text style={styles.netLabel}>Net this month</Text>
+                <Text style={[styles.netValue, netThisMonth >= 0 ? styles.calendarIncomeText : styles.calendarExpenseText]}>
+                  {netThisMonth >= 0 ? '+' : '-'}{fmtVND(netThisMonth)}
+                </Text>
+              </View>
             </View>
           </View>
 
@@ -251,67 +617,206 @@ export function AnalyticsScreen() {
 
       {activeTab === 'overview' ? (
         <View style={styles.overviewView}>
-          <View style={styles.summaryGrid}>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Total Spent</Text>
-              <Text style={styles.summaryValue}>{fmtVND(totalSpent)}</Text>
-              <View style={styles.summaryTrendRow}>
-                <Ionicons name="trending-down-outline" size={14} color="#16a34a" />
-                <Text style={styles.summaryTrendPositive}>31,000 VND less</Text>
+            <View style={styles.overviewHeaderRow}>
+              <View style={styles.overviewHeaderTitleRow}>
+                <Text style={styles.overviewHeaderTitle}>Expense Overview</Text>
               </View>
             </View>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Transactions</Text>
-              <Text style={styles.summaryValue}>4 items</Text>
-              <View style={styles.summaryTrendRow}>
-                <Ionicons name="trending-up-outline" size={14} color="#f97316" />
-                <Text style={styles.summaryTrendOrange}>+1 vs last month</Text>
+
+          <View style={styles.overviewCard}>
+            <View style={styles.overviewMonthRow}>
+                <Pressable
+                  style={styles.overviewMonthNavButton}
+                  onPress={() => setOverviewMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
+                >
+                  <Ionicons name="chevron-back" size={26} color="#4b5563" />
+                </Pressable>
+                <Pressable style={styles.overviewMonthLabelWrap} onPress={openRangePicker}>
+                  <Ionicons name="calendar-outline" size={18} color="#2b2b2b" />
+                  <Text style={styles.overviewMonthLabel}>{overviewSummary.label}</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.overviewMonthNavButton}
+                  onPress={() => setOverviewMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
+                >
+                  <Ionicons name="chevron-forward" size={26} color="#4b5563" />
+                </Pressable>
+            </View>
+
+            <View style={styles.overviewSummaryGrid}>
+              <View style={[styles.overviewMetricCard, styles.overviewMetricCardActive]}>
+                <View style={styles.overviewMetricTitleRow}>
+                  <Text style={styles.overviewMetricTitle}>Expenses</Text>
+                  <View style={styles.metricArrowBadge}>
+                    <Ionicons name="arrow-down" size={14} color="#fe3939" />
+                  </View>
+                </View>
+                <Text style={styles.overviewMetricValue}>{fmtVND(overviewSummary.expense)}</Text>
+              </View>
+
+              <View style={styles.overviewMetricCard}>
+                <View style={styles.overviewMetricTitleRow}>
+                  <Text style={styles.overviewMetricTitle}>Income</Text>
+                  <View style={styles.metricArrowBadge}>
+                    <Ionicons name="arrow-up" size={14} color="#22c55e" />
+                  </View>
+                </View>
+                <Text style={styles.overviewMetricValue}>{fmtVND(overviewSummary.income)}</Text>
               </View>
             </View>
-          </View>
 
-          <View style={styles.rangeTabsRow}>
-            {renderRangeTab('week', 'Week')}
-            {renderRangeTab('month', 'Month')}
-            {renderRangeTab('year', 'Year')}
-          </View>
+            {/* insight removed per request */}
 
-          <View style={styles.panelCard}>
-            <Text style={styles.panelTitle}>Monthly Spending (K VND)</Text>
-            <Text style={styles.panelSubtitle}>Last 6 months</Text>
-
-            <View style={styles.barChartWrap}>
-              <View style={styles.yAxisLabels}>
-                {['1000K', '750K', '500K', '250K', '0K'].map((label) => (
-                  <Text key={label} style={styles.yAxisLabel}>{label}</Text>
-                ))}
+            <View style={styles.overviewChartBlock}>
+              <View style={styles.overviewYAxisHeader}>
+                <Text style={styles.overviewYAxisLabel}>(Million VND)</Text>
               </View>
-              <View style={styles.barChartArea}>
-                {monthlyBars.map((item) => {
-                  const height = Math.max(40, Math.round((item.amount / 1_000_000) * 190));
-                  return (
-                    <View key={item.month} style={styles.barColumn}>
-                      <View style={styles.barTrack}>
-                        <View style={[styles.barFill, { height }]} />
+
+              <View style={styles.barChartWrap}>
+                <View style={styles.yAxisLabels}>
+                  {chartTopLabels.map((label) => (
+                    <Text key={label} style={styles.yAxisLabel}>{label}</Text>
+                  ))}
+                </View>
+                <View style={styles.barChartArea}>
+                  {chartData.data.map((item) => {
+                    const height = Math.max(28, Math.round((item.amount / maxChartValue) * 190));
+                    return (
+                      <View key={item.label} style={styles.barColumn}>
+                        <View style={styles.barTrack}>
+                         <View
+                    style={[
+                    styles.barFill,
+                    {
+                    height,
+                    backgroundColor:
+                    (
+                        // WEEK → all blue
+                        rangeTab === 'week'
+
+                        ||
+
+                        // MONTH → middle only
+                        (rangeTab === 'month' &&
+                        item.label === chartData.data[1]?.label)
+
+                        ||
+
+                        // YEAR → selected year only
+                        (rangeTab === 'year' &&
+                        item.label === `${overviewYearAnchor}`)
+                    )
+                        ? '#214f95'
+                        : '#d1d5db',
+                                        },
+                ]}
+                />
+                        </View>
+                        <Text style={styles.barMonth}>{item.label}</Text>
                       </View>
-                      <Text style={styles.barMonth}>{item.month}</Text>
-                    </View>
-                  );
-                })}
-              </View>
-            </View>
-
-            <View style={styles.legendRow}>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#1f4f95' }]} />
-                <Text style={styles.legendText}>Current</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#dbe3ef' }]} />
-                <Text style={styles.legendText}>Previous</Text>
+                    );
+                  })}
+                </View>
               </View>
             </View>
           </View>
+
+          <Modal visible={showRangePicker} transparent animationType="fade" onRequestClose={() => setShowRangePicker(false)}>
+            <Pressable style={styles.rangeModalOverlay} onPress={() => setShowRangePicker(false)}>
+              <Pressable style={styles.rangeModalSheet} onPress={() => undefined}>
+                <View style={styles.rangeModalHeaderRow}>
+                  <Text style={styles.rangeModalTitle}>Choose chart period</Text>
+                  <Pressable onPress={() => setShowRangePicker(false)} style={styles.rangeModalCloseButton}>
+                    <Ionicons name="close" size={24} color="#2f3135" />
+                  </Pressable>
+                </View>
+
+                <View style={styles.rangeModalTabsRow}>
+                  {renderRangeTab('week', 'Week')}
+                  {renderRangeTab('month', 'Month')}
+                  {renderRangeTab('year', 'Year')}
+                </View>
+
+                <View style={styles.rangeModalContentCard}>
+                  <View style={styles.rangeModalMiniHeader}>
+                    <Pressable style={styles.rangeModalMiniNavButton} onPress={() => shiftDraftPeriod(-1)}>
+                      <Ionicons name="chevron-back" size={22} color="#2f3135" />
+                    </Pressable>
+                    <Text style={styles.rangeModalMiniTitle}>
+                      {draftRangeTab === 'year'
+                        ? `${draftOverviewYearAnchor}`
+                        : `${monthLabels[draftOverviewMonthAnchor.getMonth()]} ${draftOverviewMonthAnchor.getFullYear()}`}
+                    </Text>
+                    <Pressable style={styles.rangeModalMiniNavButton} onPress={() => shiftDraftPeriod(1)}>
+                      <Ionicons name="chevron-forward" size={22} color="#2f3135" />
+                    </Pressable>
+                  </View>
+
+                  {draftRangeTab === 'week' ? (
+                    <View style={styles.rangeModalList}>
+                      {[
+                        'Week 1: day 27 - day 2',
+                        'Week 2: day 3 - day 9',
+                        'Week 3: day 10 - day 16',
+                        'Week 4: day 17 - day 23',
+                        'Week 5: day 24 - day 2',
+                      ].map((item, idx) => {
+                        const selected = idx === draftWeekIndex;
+                        return (
+                          <Pressable key={item} onPress={() => setDraftWeekIndex(idx)} style={[styles.rangeModalWeekItem, selected && styles.rangeModalWeekItemActive]}>
+                            <Text style={[styles.rangeModalListItem, selected && styles.rangeModalListItemActive]}>
+                              <Text style={styles.rangeModalListItemBold}>{item.split(':')[0]}:</Text> {item.split(':')[1].trim()}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  ) : draftRangeTab === 'month' ? (
+                    <View style={styles.rangeModalMonthGrid}>
+                      {[
+                        'Jan', 'Feb', 'Mar',
+                        'Apr', 'May', 'Jun',
+                        'Jul', 'Aug', 'Sep',
+                        'Oct', 'Nov', 'Dec',
+                      ].map((month, index) => {
+                        const selected = index === draftOverviewMonthAnchor.getMonth();
+                        return (
+                          <Pressable
+                            key={month}
+                            onPress={() => setDraftOverviewMonthAnchor(new Date(draftOverviewMonthAnchor.getFullYear(), index, 1))}
+                            style={[styles.rangeModalMonthItem, selected && styles.rangeModalMonthItemActive]}
+                          >
+                            <Text style={[styles.rangeModalMonthText, selected && styles.rangeModalMonthTextActive]}>{month}</Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  ) : (
+                    <View style={styles.rangeModalYearGrid}>
+                      {Array.from({ length: 3 }, (_, index) => draftOverviewYearWindowStart + index).map((year) => (
+                        <Pressable
+                          key={year}
+                          onPress={() => setDraftOverviewYearAnchor(year)}
+                          style={[styles.rangeModalYearItem, year === draftOverviewYearAnchor && styles.rangeModalYearItemActive]}
+                        >
+                          <Text style={[styles.rangeModalYearText, year === draftOverviewYearAnchor && styles.rangeModalYearTextActive]}>{year}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.rangeModalFooterRow}>
+                  <Pressable style={styles.rangeModalFooterButtonOutline} onPress={handleRangePickerReset}>
+                    <Text style={styles.rangeModalFooterButtonOutlineText}>Clear filter</Text>
+                  </Pressable>
+                  <Pressable style={styles.rangeModalFooterButtonFill} onPress={handleRangePickerApply}>
+                    <Text style={styles.rangeModalFooterButtonFillText}>Apply</Text>
+                  </Pressable>
+                </View>
+              </Pressable>
+            </Pressable>
+          </Modal>
         </View>
       ) : null}
     </ScrollView>
@@ -345,13 +850,13 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   headerEyebrow: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: '#94a3b8',
     marginBottom: 4,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 24,
     lineHeight: 32,
     fontWeight: '900',
     color: '#1e293b',
@@ -369,7 +874,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   monthChangeText: {
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: '700',
     color: '#0f8f2a',
   },
@@ -385,11 +890,11 @@ const styles = StyleSheet.create({
   tabItem: {
     flex: 1,
     alignItems: 'center',
-    paddingTop: 18,
-    paddingBottom: 14,
+    paddingTop: 12,
+    paddingBottom: 10,
   },
   tabText: {
-    fontSize: 17,
+    fontSize: 14,
     fontWeight: '700',
     color: '#94a3b8',
   },
@@ -398,8 +903,8 @@ const styles = StyleSheet.create({
   },
   tabIndicator: {
     height: 2,
-    width: '70%',
-    marginTop: 14,
+    width: '52%',
+    marginTop: 10,
     backgroundColor: 'transparent',
     borderRadius: 999,
   },
@@ -425,13 +930,13 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   summaryLabel: {
-    fontSize: 15,
+    fontSize: 12,
     color: '#94a3b8',
     fontWeight: '600',
     marginBottom: 8,
   },
   summaryValue: {
-    fontSize: 22,
+    fontSize: 18,
     lineHeight: 26,
     fontWeight: '900',
     color: '#1e293b',
@@ -443,12 +948,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   summaryTrendPositive: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: '#16a34a',
   },
   summaryTrendOrange: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: '#f97316',
   },
@@ -469,17 +974,17 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   panelTitle: {
-    fontSize: 19,
+    fontSize: 15,
     fontWeight: '900',
     color: '#334155',
   },
   panelSubtitle: {
-    fontSize: 15,
+    fontSize: 12,
     color: '#94a3b8',
     marginTop: 4,
   },
   panelTotal: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#94a3b8',
     fontWeight: '600',
   },
@@ -531,12 +1036,12 @@ const styles = StyleSheet.create({
   },
   categoryName: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 13,
     color: '#475569',
     fontWeight: '500',
   },
   categoryPercent: {
-    fontSize: 17,
+    fontSize: 12,
     fontWeight: '800',
     color: '#334155',
   },
@@ -551,7 +1056,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   sectionHeading: {
-    fontSize: 19,
+    fontSize: 16,
     fontWeight: '900',
     color: '#334155',
     marginTop: 2,
@@ -581,7 +1086,7 @@ const styles = StyleSheet.create({
     marginRight: 14,
   },
   transactionEmoji: {
-    fontSize: 22,
+    fontSize: 18,
   },
   transactionInfo: {
     flex: 1,
@@ -593,7 +1098,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   transactionMeta: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#94a3b8',
     fontWeight: '600',
   },
@@ -602,10 +1107,15 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   transactionAmount: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '900',
-    color: '#ef4444',
     marginBottom: 4,
+  },
+  transactionExpenseAmount: {
+    color: '#ef4444',
+  },
+  transactionIncomeAmount: {
+    color: '#16a34a',
   },
   transactionCategory: {
     fontSize: 14,
@@ -613,12 +1123,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   calendarView: {
-    gap: 14,
+    gap: 12,
   },
   calendarCard: {
     backgroundColor: '#ffffff',
     borderRadius: 26,
-    padding: 18,
+    padding: 14,
     shadowColor: '#1e293b',
     shadowOpacity: 0.05,
     shadowOffset: { width: 0, height: 8 },
@@ -640,7 +1150,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   calendarMonth: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '900',
     color: '#334155',
   },
@@ -658,21 +1168,28 @@ const styles = StyleSheet.create({
   calendarGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    marginBottom: 10,
   },
   calendarCell: {
     width: '14.2857%',
-    aspectRatio: 1,
+    height: 90,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 2,
     paddingVertical: 4,
   },
   calendarDayBubble: {
-    width: 64,
-    height: 64,
-    borderRadius: 14,
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  calendarDayBubbleSelected: {
+    borderWidth: 2,
+    borderColor: '#1C4D8D',
   },
   calendarIncomeBubble: {
     backgroundColor: '#eefcf0',
@@ -689,9 +1206,14 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#94a3b8',
   },
-  calendarBadge: {
-    fontSize: 10,
+  calendarBubbleAmount: {
+    fontSize: 8,
     fontWeight: '900',
+    lineHeight: 10,
+    textAlign: 'center',
+  },
+  calendarSelectedDayText: {
+    color: '#1C4D8D',
   },
   calendarIncomeText: {
     color: '#16a34a',
@@ -702,8 +1224,8 @@ const styles = StyleSheet.create({
   calendarDivider: {
     height: 1,
     backgroundColor: '#edf2f7',
-    marginTop: 12,
-    marginBottom: 14,
+    marginTop: 8,
+    marginBottom: 10,
   },
   netRow: {
     flexDirection: 'row',
@@ -711,14 +1233,149 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   netLabel: {
-    fontSize: 16,
+    fontSize: 13,
     color: '#94a3b8',
     fontWeight: '700',
   },
   netValue: {
-    fontSize: 17,
+    fontSize: 14,
     color: '#16a34a',
     fontWeight: '900',
+  },
+  dayTransactionsHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+    marginBottom: 8,
+  },
+  dayTransactionsTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#334155',
+  },
+  dayTransactionsSubtitle: {
+    marginTop: 3,
+    fontSize: 12,
+    color: '#94a3b8',
+    fontWeight: '600',
+  },
+  selectedDayList: {
+    gap: 6,
+    marginBottom: 10,
+  },
+  selectedDayItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eef2f7',
+  },
+  selectedDayIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  selectedDayInfo: {
+    flex: 1,
+  },
+  selectedDayAmount: {
+    fontSize: 14,
+    fontWeight: '800',
+    marginLeft: 10,
+  },
+  selectedDaySection: {
+    backgroundColor: '#fafcff',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#edf2f7',
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 10,
+  },
+  selectedDayActionButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: '#fde7f3',
+  },
+  selectedDayActionText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#ec4899',
+  },
+  noTransactionsText: {
+    fontSize: 14,
+    color: '#94a3b8',
+    fontWeight: '600',
+    paddingVertical: 8,
+  },
+  calendarToolbarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  calendarIconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  calendarMonthPicker: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  calendarMonthNavButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  calendarLegendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: 14,
+    marginTop: 8,
+  },
+  calendarLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  calendarLegendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  calendarLegendText: {
+    fontSize: 12,
+    color: '#6b7280',
+    fontWeight: '600',
+  },
+  calendarHandleWrap: {
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 6,
+  },
+  calendarHandle: {
+    width: 54,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: '#dbe3ef',
   },
   helpCard: {
     backgroundColor: '#f5f9ff',
@@ -739,6 +1396,333 @@ const styles = StyleSheet.create({
   },
   overviewView: {
     gap: 14,
+  },
+  overviewHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  overviewHeaderTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  overviewHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#2f3135',
+  },
+  trendButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  trendButtonText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#ec4899',
+  },
+  overviewCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 14,
+    shadowColor: '#1e293b',
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 18,
+    elevation: 2,
+  },
+  overviewMonthRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  overviewMonthNavButton: {
+    width: 34,
+    height: 34,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  overviewMonthLabelWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  overviewMonthLabel: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#2f3135',
+  },
+  overviewSummaryGrid: {
+    flexDirection: 'row',
+    gap: 0,
+    borderWidth: 1,
+    borderColor: '#e6e6e6',
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  overviewMetricCard: {
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    backgroundColor: '#ffffff',
+  },
+  overviewMetricCardActive: {
+    borderWidth: 2,
+    borderColor: '#f59ac8',
+    margin: -1,
+  },
+  overviewMetricTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  overviewMetricTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#404040',
+  },
+  metricArrowBadge: {
+    width: 16,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f1fbf3',
+  },
+  overviewMetricValue: {
+    fontSize: 15,
+    lineHeight: 24,
+    fontWeight: '900',
+    color: '#2f3135',
+    letterSpacing: -0.4,
+  },
+  overviewInsightCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 16,
+    backgroundColor: '#f3fbf5',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  overviewInsightLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  overviewInsightShield: {
+    width: 28,
+    height: 28,
+    borderRadius: 10,
+    backgroundColor: '#16a34a',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  overviewInsightText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#16a34a',
+    lineHeight: 20,
+  },
+  overviewInsightSubText: {
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  overviewChartBlock: {
+    marginTop: 12,
+  },
+  overviewYAxisHeader: {
+    marginBottom: 4,
+  },
+  overviewYAxisLabel: {
+    fontSize: 12,
+    color: '#7c7c7c',
+    fontWeight: '700',
+  },
+  rangeModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  rangeModalSheet: {
+    backgroundColor: '#f8f8fc',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 18,
+  },
+  rangeModalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  rangeModalTitle: {
+    flex: 1,
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: '900',
+    color: '#2f3135',
+    textAlign: 'center',
+    marginRight: 24,
+  },
+  rangeModalCloseButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: -32,
+  },
+  rangeModalTabsRow: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 4,
+    marginBottom: 14,
+  },
+  rangeModalContentCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 12,
+    minHeight: 280,
+  },
+  rangeModalMiniHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 10,
+    marginBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#d7e2ff',
+  },
+  rangeModalMiniNavButton: {
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rangeModalMiniTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#2f3135',
+  },
+  rangeModalList: {
+    gap: 14,
+    paddingVertical: 10,
+  },
+  rangeModalWeekItem: {
+    borderRadius: 12,
+    paddingVertical: 6,
+  },
+  rangeModalWeekItemActive: {
+    backgroundColor: '#f3f5ff',
+  },
+  rangeModalListItemActive: {
+    color: '#1f2b6c',
+    fontWeight: '800',
+  },
+  rangeModalListItem: {
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#4b5563',
+  },
+  rangeModalListItemBold: {
+    fontWeight: '800',
+    color: '#2f3135',
+  },
+  rangeModalMonthGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 14,
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  rangeModalMonthItem: {
+    width: '30%',
+    minHeight: 46,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 14,
+  },
+  rangeModalMonthItemActive: {
+    backgroundColor: '#ec4899',
+  },
+  rangeModalMonthText: {
+    fontSize: 16,
+    color: '#374151',
+    fontWeight: '600',
+  },
+  rangeModalMonthTextActive: {
+    color: '#ffffff',
+    fontWeight: '800',
+  },
+  rangeModalYearGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingVertical: 10,
+  },
+  rangeModalYearItem: {
+    flex: 1,
+    minHeight: 56,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 14,
+  },
+  rangeModalYearItemActive: {
+    backgroundColor: '#ec4899',
+  },
+  rangeModalYearText: {
+    fontSize: 16,
+    color: '#374151',
+    fontWeight: '600',
+  },
+  rangeModalYearTextActive: {
+    color: '#ffffff',
+    fontWeight: '800',
+  },
+  rangeModalFooterRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 16,
+  },
+  rangeModalFooterButtonOutline: {
+    flex: 1,
+    minHeight: 56,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#1f6feb',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  rangeModalFooterButtonOutlineText: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#1f6feb',
+  },
+  rangeModalFooterButtonFill: {
+    flex: 1,
+    minHeight: 56,
+    borderRadius: 14,
+    backgroundColor: '#1f6feb',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rangeModalFooterButtonFillText: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#ffffff',
   },
   rangeTabsRow: {
     flexDirection: 'row',
@@ -782,7 +1766,7 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
   },
   yAxisLabel: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#c7d2e3',
     fontWeight: '700',
     textAlign: 'right',
@@ -818,7 +1802,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#214f95',
   },
   barMonth: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#8da0c0',
     fontWeight: '700',
   },

@@ -1,15 +1,17 @@
+import { categoryGroups } from '@/constants/categories';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+
 import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 const styles = StyleSheet.create({
@@ -42,22 +44,23 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
+    paddingBottom: 20,
   },
   section: {
-    marginVertical: 12,
+    marginVertical: 14,
   },
   sectionTitle: {
     fontSize: 14,
     fontWeight: '600',
     color: '#1a202c',
-    marginBottom: 8,
+    marginBottom: 10,
     paddingHorizontal: 4,
   },
   card: {
     backgroundColor: '#ffffff',
     borderRadius: 16,
-    padding: 16,
+    padding: 18,
     borderWidth: 1,
     borderColor: 'rgba(28,77,141,0.08)',
     shadowColor: '#1C4D8D',
@@ -82,46 +85,6 @@ const styles = StyleSheet.create({
     color: '#64748b',
     marginBottom: 6,
     paddingHorizontal: 4,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-  },
-  flex1: {
-    flex: 1,
-  },
-  categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  categoryButton: {
-    width: '30%',
-    aspectRatio: 1,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#e2e8f0',
-    backgroundColor: '#ffffff',
-  },
-  categoryButtonActive: {
-    borderColor: '#1C4D8D',
-    backgroundColor: '#EEF4FF',
-  },
-  categoryIcon: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  categoryLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#64748b',
-    textAlign: 'center',
-  },
-  categoryLabelActive: {
-    color: '#1C4D8D',
   },
   button: {
     backgroundColor: '#1C4D8D',
@@ -148,6 +111,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
+  },
+  categoryModal: {
+    width: '100%',
+    maxWidth: 420,
+    maxHeight: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 18,
   },
   calendarHeader: {
     flexDirection: 'row',
@@ -185,6 +156,92 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
   },
+  quickGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 14,
+  },
+  quickItem: {
+    width: '23%',
+    alignItems: 'center',
+  },
+  quickIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  quickIconWrapActive: {
+    backgroundColor: '#DBEAFE',
+    borderColor: '#3B82F6',
+  },
+  quickLabel: {
+    marginTop: 10,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#334155',
+    textAlign: 'center',
+    width: '100%',
+  },
+  quickLabelActive: {
+    color: '#1C4D8D',
+  },
+  moreButtonLabel: {
+    marginTop: 10,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0f172a',
+    textAlign: 'center',
+  },
+  categoryContainer: {
+    gap: 16,
+  },
+  groupCard: {
+    marginBottom: 14,
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#eef2f7',
+    backgroundColor: '#ffffff',
+  },
+  groupHeader: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  groupTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  categoryGrid: {
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 6,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  categoryItem: {
+    width: '25%',
+    alignItems: 'center',
+    marginBottom: 22,
+  },
+  categoryItemIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  categoryItemLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+    width: '100%',
+  },
 });
 
 interface AddExpenseScreenProps {
@@ -192,24 +249,76 @@ interface AddExpenseScreenProps {
   initialType?: 'expense' | 'income';
 }
 
-const categories = [
-  { id: 'food', label: 'Food', icon: '🍔' },
-  { id: 'shopping', label: 'Shopping', icon: '🛍️' },
-  { id: 'transport', label: 'Transport', icon: '🚗' },
-  { id: 'education', label: 'Education', icon: '🎓' },
-  { id: 'entertainment', label: 'Entertainment', icon: '🎬' },
-  { id: 'utilities', label: 'Utilities', icon: '💡' },
+type CategoryItem = {
+  id: number;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+};
+
+const basicCategories: CategoryItem[] = [
+  { id: 1, label: 'Dining', icon: 'restaurant-outline', color: '#f59e0b' },
+  { id: 2, label: 'Shopping', icon: 'bag-handle-outline', color: '#ec4899' },
+  { id: 3, label: 'Transport', icon: 'car-outline', color: '#3b82f6' },
 ];
+
+const moreCategories: Array<{
+  groupId: number;
+  title: string;
+  color: string;
+  bgColor: string;
+  categories: CategoryItem[];
+}> = categoryGroups.map((group) => ({
+  groupId: group.id,
+  title: group.title,
+  color: group.color,
+  bgColor: group.bgColor,
+  categories: group.categories.map((item) => ({
+    id: item.id,
+    label: item.label,
+    icon: item.icon as keyof typeof Ionicons.glyphMap,
+    color: item.color,
+  })),
+}));
 
 export function AddExpenseScreen({ onClose, initialType = 'expense' }: AddExpenseScreenProps) {
   const [type, setType] = useState(initialType);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('food');
+  const [selectedCategory, setSelectedCategory] = useState<CategoryItem['label']>(basicCategories[0].label);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [date, setDate] = useState('Today');
   const [showCalendar, setShowCalendar] = useState(false);
+  const [showMoreCategories, setShowMoreCategories] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(dayjs().startOf('month'));
+
+  const moreCategoryItems = useMemo(
+    () => moreCategories.flatMap((group) => group.categories),
+    [],
+  );
+
+  const quickCategories = useMemo(() => {
+    const allItems = [
+      ...basicCategories,
+      ...moreCategoryItems.filter(
+        (item) => !basicCategories.some((basicItem) => basicItem.label === item.label),
+      ),
+    ];
+
+    const selectedItem =
+      allItems.find((item) => item.label === selectedCategory) ?? basicCategories[0];
+
+    const fallbackItems = basicCategories.filter(
+      (item) => item.label !== selectedItem.label,
+    );
+
+    return [selectedItem, ...fallbackItems].slice(0, 3);
+  }, [moreCategoryItems, selectedCategory]);
+
+  const selectedMoreCategory = useMemo(
+    () => moreCategoryItems.find((item) => item.label === selectedCategory),
+    [moreCategoryItems, selectedCategory],
+  );
 
   const formatDateLabel = (d: Date) => {
     const today = dayjs();
@@ -219,8 +328,7 @@ export function AddExpenseScreen({ onClose, initialType = 'expense' }: AddExpens
   };
 
   const handleSubmit = () => {
-    if (amount && description) {
-      // Handle submission (e.g., save to context)
+    if (amount.trim() && description.trim()) {
       onClose?.();
     }
   };
@@ -235,7 +343,6 @@ export function AddExpenseScreen({ onClose, initialType = 'expense' }: AddExpens
       </View>
 
       <View style={styles.content}>
-        {/* Type Toggle */}
         <View style={styles.section}>
           <View style={styles.card}>
             <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -265,7 +372,6 @@ export function AddExpenseScreen({ onClose, initialType = 'expense' }: AddExpens
           </View>
         </View>
 
-        {/* Amount */}
         <View style={styles.section}>
           <View style={styles.card}>
             <Text style={styles.inputLabel}>Amount (VND)</Text>
@@ -280,7 +386,6 @@ export function AddExpenseScreen({ onClose, initialType = 'expense' }: AddExpens
           </View>
         </View>
 
-        {/* Description */}
         <View style={styles.section}>
           <View style={styles.card}>
             <Text style={styles.inputLabel}>Description</Text>
@@ -295,35 +400,49 @@ export function AddExpenseScreen({ onClose, initialType = 'expense' }: AddExpens
           </View>
         </View>
 
-        {/* Category */}
         {type === 'expense' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Category</Text>
             <View style={styles.card}>
-              <View style={styles.categoryGrid}>
-                {categories.map((cat) => (
-                  <Pressable
-                    key={cat.id}
-                    style={[styles.categoryButton, selectedCategory === cat.id && styles.categoryButtonActive]}
-                    onPress={() => setSelectedCategory(cat.id)}
-                  >
-                    <Text style={styles.categoryIcon}>{cat.icon}</Text>
-                    <Text style={[styles.categoryLabel, selectedCategory === cat.id && styles.categoryLabelActive]}>
-                      {cat.label}
-                    </Text>
-                  </Pressable>
-                ))}
+              <View style={styles.quickGrid}>
+                {quickCategories.map((item) => {
+                  const isSelected = selectedCategory === item.label;
+                  return (
+                    <Pressable
+                      key={item.id}
+                      style={styles.quickItem}
+                      onPress={() => setSelectedCategory(item.label)}
+                    >
+                      <View style={[styles.quickIconWrap, isSelected && styles.quickIconWrapActive]}>
+                        <Ionicons name={item.icon as any} size={30} color={item.color} />
+                      </View>
+                      <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.quickLabel, isSelected && styles.quickLabelActive]}>{item.label}</Text>
+                    </Pressable>
+                  );
+                })}
+
+                <Pressable style={styles.quickItem} onPress={() => setShowMoreCategories(true)}>
+                  <View style={styles.quickIconWrap}>
+                    <Ionicons name="grid-outline" size={30} color="#ec4899" />
+                  </View>
+                  <Text style={styles.moreButtonLabel}>More</Text>
+                </Pressable>
               </View>
             </View>
           </View>
         )}
 
-        {/* Date */}
         <View style={styles.section}>
           <View style={styles.card}>
             <Text style={styles.inputLabel}>Date</Text>
-            <Pressable style={[styles.input, { justifyContent: 'space-between', flexDirection: 'row', alignItems: 'center' }]} onPress={() => setShowCalendar(true)}>
-              <Text style={{ color: date === 'Today' ? '#0f172a' : '#0f172a' }}>{date}</Text>
+            <Pressable
+              style={[
+                styles.input,
+                { justifyContent: 'space-between', flexDirection: 'row', alignItems: 'center' },
+              ]}
+              onPress={() => setShowCalendar(true)}
+            >
+              <Text style={{ color: '#0f172a' }}>{date}</Text>
               <Ionicons name="calendar-outline" size={18} color="#64748b" />
             </Pressable>
 
@@ -331,38 +450,45 @@ export function AddExpenseScreen({ onClose, initialType = 'expense' }: AddExpens
               <View style={styles.modalOverlay}>
                 <View style={styles.calendarModal}>
                   <View style={styles.calendarHeader}>
-                    <TouchableOpacity onPress={() => setCalendarMonth(calendarMonth.subtract(1, 'month'))}>
+                    <TouchableOpacity onPress={() => setCalendarMonth((current) => current.subtract(1, 'month'))}>
                       <Ionicons name="chevron-back" size={22} color="#1C4D8D" />
                     </TouchableOpacity>
                     <Text style={styles.monthText}>{calendarMonth.format('MMMM YYYY')}</Text>
-                    <TouchableOpacity onPress={() => setCalendarMonth(calendarMonth.add(1, 'month'))}>
+                    <TouchableOpacity onPress={() => setCalendarMonth((current) => current.add(1, 'month'))}>
                       <Ionicons name="chevron-forward" size={22} color="#1C4D8D" />
                     </TouchableOpacity>
                   </View>
 
                   <View style={styles.weekRow}>
-                    {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((w) => (
-                      <Text key={w} style={{ width: 36, textAlign: 'center', color: '#64748b', fontWeight: '700' }}>{w}</Text>
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((w) => (
+                      <Text key={w} style={{ width: 36, textAlign: 'center', color: '#64748b', fontWeight: '700' }}>
+                        {w}
+                      </Text>
                     ))}
                   </View>
 
-                  {/* days grid */}
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
                     {(() => {
                       const startDay = calendarMonth.startOf('month').day();
                       const daysInMonth = calendarMonth.daysInMonth();
-                      const blanks = Array.from({ length: startDay }).map((_, i) => (<View key={`b${i}`} style={{ width: 36, height: 36 }} />));
-                      const days = Array.from({ length: daysInMonth }).map((_, i) => {
-                        const dayNum = i + 1;
-                        const dt = calendarMonth.date(dayNum);
-                        const isSelected = dayjs(selectedDate).isSame(dt, 'day');
+                      const blanks = Array.from({ length: startDay }).map((_, index) => (
+                        <View key={`blank-${index}`} style={{ width: 36, height: 36 }} />
+                      ));
+                      const days = Array.from({ length: daysInMonth }).map((_, index) => {
+                        const dayNum = index + 1;
+                        const currentDay = calendarMonth.date(dayNum);
+                        const isSelected = dayjs(selectedDate).isSame(currentDay, 'day');
                         return (
-                          <Pressable key={dayNum} style={[styles.dayCell, isSelected && styles.dayCellSelected]} onPress={() => {
-                            const newDate = dt.toDate();
-                            setSelectedDate(newDate);
-                            setDate(formatDateLabel(newDate));
-                            setShowCalendar(false);
-                          }}>
+                          <Pressable
+                            key={dayNum}
+                            style={[styles.dayCell, isSelected && styles.dayCellSelected]}
+                            onPress={() => {
+                              const newDate = currentDay.toDate();
+                              setSelectedDate(newDate);
+                              setDate(formatDateLabel(newDate));
+                              setShowCalendar(false);
+                            }}
+                          >
                             <Text style={[styles.dayCellText, isSelected && { color: '#fff' }]}>{dayNum}</Text>
                           </Pressable>
                         );
@@ -372,7 +498,15 @@ export function AddExpenseScreen({ onClose, initialType = 'expense' }: AddExpens
                   </View>
 
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
-                    <Pressable onPress={() => { const today = new Date(); setSelectedDate(today); setDate(formatDateLabel(today)); setShowCalendar(false); }} style={styles.todayButton}>
+                    <Pressable
+                      onPress={() => {
+                        const today = new Date();
+                        setSelectedDate(today);
+                        setDate(formatDateLabel(today));
+                        setShowCalendar(false);
+                      }}
+                      style={styles.todayButton}
+                    >
                       <Text style={{ color: '#1C4D8D', fontWeight: '700' }}>Today</Text>
                     </Pressable>
                     <Pressable onPress={() => setShowCalendar(false)} style={styles.todayButton}>
@@ -385,7 +519,121 @@ export function AddExpenseScreen({ onClose, initialType = 'expense' }: AddExpens
           </View>
         </View>
 
-        {/* Submit Button */}
+        <Modal visible={showMoreCategories} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.categoryModal}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+                <Text style={{ fontSize: 20, fontWeight: '800', color: '#0f172a' }}>Choose Category</Text>
+                <Pressable onPress={() => setShowMoreCategories(false)}>
+                  <Ionicons name="close" size={26} color="#64748b" />
+                </Pressable>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {selectedMoreCategory && (
+                  <View style={{ marginBottom: 16 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748b', marginBottom: 8, paddingHorizontal: 4 }}>
+                      Selected
+                    </Text>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        borderRadius: 18,
+                        borderWidth: 1,
+                        borderColor: selectedMoreCategory.color,
+                        backgroundColor: `${selectedMoreCategory.color}15`,
+                        padding: 14,
+                        marginBottom: 14,
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: 16,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          backgroundColor: '#fff',
+                          marginRight: 12,
+                          borderWidth: 1,
+                          borderColor: `${selectedMoreCategory.color}35`,
+                        }}
+                      >
+                        <Ionicons name={selectedMoreCategory.icon} size={26} color={selectedMoreCategory.color} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '800', color: '#0f172a' }}>
+                          {selectedMoreCategory.label}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+                <View style={styles.categoryContainer}>
+                  {moreCategories.map((group) => (
+                    <View key={group.groupId} style={styles.groupCard}>
+                      <View
+                        style={[
+                          styles.groupHeader,
+                          { backgroundColor: group.bgColor },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.groupTitle,
+                            { color: group.color },
+                          ]}
+                        >
+                          {group.title}
+                        </Text>
+                      </View>
+
+                      <View style={styles.categoryGrid}>
+                        {group.categories.map((item) => {
+                          const isSelected = selectedCategory === item.label;
+                          return (
+                            <Pressable
+                              key={item.id}
+                              style={styles.categoryItem}
+                              onPress={() => {
+                                setSelectedCategory(item.label);
+                                setShowMoreCategories(false);
+                              }}
+                            >
+                              <View
+                                style={[
+                                  styles.categoryItemIcon,
+                                  {
+                                    backgroundColor: isSelected ? `${item.color}18` : '#F8FAFC',
+                                    borderWidth: 1,
+                                    borderColor: item.color,
+                                  },
+                                ]}
+                              >
+                                <Ionicons
+                                  name={item.icon as any}
+                                  size={28}
+                                  color={item.color}
+                                />
+                              </View>
+
+                              <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.categoryItemLabel, { color: item.color, fontWeight: isSelected ? '700' : '600' }]}>
+                                {item.label}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
         <Pressable style={styles.button} onPress={handleSubmit}>
           <Text style={styles.buttonText}>Add {type === 'expense' ? 'Expense' : 'Income'}</Text>
         </Pressable>
