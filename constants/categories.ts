@@ -29,7 +29,7 @@ export const categoryGroups = [
         id: 103,
         label: 'Transportation',
         icon: 'car-outline',
-        color: '#4f9cf2',
+        color: '#F48F68',
       },
     ],
   },
@@ -37,15 +37,15 @@ export const categoryGroups = [
   {
     id: 2,
     title: 'Extra Expenses',
-    color: '#f2b300',
-    bgColor: '#fff9e6',
+    color: '#f472b6',
+    bgColor: '#FFCEE3',
 
     categories: [
       {
         id: 201,
         label: 'Shopping',
         icon: 'bag-handle-outline',
-        color: '#f59e0b',
+        color: '#BF4646',
       },
       {
         id: 202,
@@ -69,7 +69,7 @@ export const categoryGroups = [
         id: 205,
         label: 'Miscellaneous',
         icon: 'apps-outline',
-        color: '#8b5cf6',
+        color: '#F13E93',
       },
     ],
   },
@@ -85,19 +85,19 @@ export const categoryGroups = [
         id: 301,
         label: 'Rent',
         icon: 'home-outline',
-        color: '#34d399',
+        color: '#4f9cf2',
       },
       {
         id: 302,
         label: 'Bills',
         icon: 'receipt-outline',
-        color: '#2dd4bf',
+        color: '#2FA4D7',
       },
       {
         id: 303,
         label: 'Family',
         icon: 'people-outline',
-        color: '#f472b6',
+        color: '#134E8E',
       },
     ],
   },
@@ -105,15 +105,15 @@ export const categoryGroups = [
   {
     id: 4,
     title: 'Investment & Savings',
-    color: '#22b8a8',
-    bgColor: '#ebfbf8',
+    color: '#9B5DE0',
+    bgColor: '#FFDBFD',
 
     categories: [
       {
         id: 401,
         label: 'Investment',
         icon: 'trending-up-outline',
-        color: '#2dd4bf',
+        color: '#696FC7',
       },
       {
         id: 402,

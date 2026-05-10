@@ -156,22 +156,22 @@ export function AIChatScreen() {
           <View style={styles.insightItem}>
             <View style={[styles.insightDot, { backgroundColor: '#16a34a' }]} />
             <View style={styles.insightTextWrap}>
-              <Text style={styles.insightTitle}>On Track! 🎯</Text>
-              <Text style={styles.insightDesc}>You've only used 18% of your April budget.</Text>
+              <Text style={[styles.insightTitle, { color: colors.text }]}>On Track! 🎯</Text>
+              <Text style={[styles.insightDesc, { color: colors.textSecondary }]}>You've only used 18% of your April budget.</Text>
             </View>
           </View>
           <View style={styles.insightItem}>
             <View style={[styles.insightDot, { backgroundColor: '#f59e0b' }]} />
             <View style={styles.insightTextWrap}>
-              <Text style={styles.insightTitle}>Education Spending</Text>
-              <Text style={styles.insightDesc}>55% of expenses. Consider free resources.</Text>
+              <Text style={[styles.insightTitle, { color: colors.text }]}>Education Spending</Text>
+              <Text style={[styles.insightDesc, { color: colors.textSecondary }]}>55% of expenses. Consider free resources.</Text>
             </View>
           </View>
           <View style={styles.insightItem}>
             <View style={[styles.insightDot, { backgroundColor: '#3b82f6' }]} />
             <View style={styles.insightTextWrap}>
-              <Text style={styles.insightTitle}>Savings Potential</Text>
-              <Text style={styles.insightDesc}>You could save ~200K more this month.</Text>
+              <Text style={[styles.insightTitle, { color: colors.text }]}>Savings Potential</Text>
+              <Text style={[styles.insightDesc, { color: colors.textSecondary }]}>You could save ~200K more this month.</Text>
             </View>
           </View>
         </View>
@@ -181,12 +181,12 @@ export function AIChatScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.quickPromptsScroll}
+        style={[styles.quickPromptsScroll, { backgroundColor: colors.bg }]}
         contentContainerStyle={styles.quickPromptsContent}
       >
         {quickPrompts.map((p, i) => (
-          <Pressable key={i} style={styles.quickPromptPill} onPress={() => sendMessage(p.text)}>
-            <Text style={styles.quickPromptText}>{p.label}</Text>
+          <Pressable key={i} style={[styles.quickPromptPill, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => sendMessage(p.text)}>
+            <Text style={[styles.quickPromptText, { color: colors.text }]}>{p.label}</Text>
           </Pressable>
         ))}
       </ScrollView>
