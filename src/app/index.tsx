@@ -17,6 +17,7 @@ import { CameraScreen } from './components/CameraScreen';
 import { DashboardScreen } from './components/DashboardScreen';
 import { ProfileScreen } from './components/ProfileScreen';
 import { LoginScreen } from './components/LoginScreen';
+import { SignupScreen } from './components/SignupScreen';
 import { ThemeProvider, useColors } from '../context/ThemeContext';
 
 type ScreenId =
@@ -57,6 +58,7 @@ function AppInner() {
 	const [activeScreen, setActiveScreen] =
 		useState<ScreenId>('home');
 	const [isAuthenticated, setIsAuthenticated] = useState(false);
+	const [authScreen, setAuthScreen] = useState<'login' | 'signup'>('login');
 	const [addTransactionType, setAddTransactionType] =
 		useState<'expense' | 'income'>('expense');
 	const [addTransactionReturnScreen, setAddTransactionReturnScreen] =
@@ -176,7 +178,11 @@ function AppInner() {
 	};
 
 	if (!isAuthenticated) {
-		return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
+		if (authScreen === 'login') {
+			return <LoginScreen onLogin={() => setIsAuthenticated(true)} onNavigateSignup={() => setAuthScreen('signup')} />;
+		} else {
+			return <SignupScreen onSignup={() => setIsAuthenticated(true)} onNavigateLogin={() => setAuthScreen('login')} />;
+		}
 	}
 
 	return (

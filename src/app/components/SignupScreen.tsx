@@ -12,13 +12,14 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useColors } from '../../context/ThemeContext';
 
-interface LoginScreenProps {
-  onLogin: () => void;
-  onNavigateSignup: () => void;
+interface SignupScreenProps {
+  onSignup: () => void;
+  onNavigateLogin: () => void;
 }
 
-export function LoginScreen({ onLogin, onNavigateSignup }: LoginScreenProps) {
+export function SignupScreen({ onSignup, onNavigateLogin }: SignupScreenProps) {
   const colors = useColors();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -34,13 +35,28 @@ export function LoginScreen({ onLogin, onNavigateSignup }: LoginScreenProps) {
             <View style={styles.iconWrap}>
               <Ionicons name="wallet" size={48} color="#ffffff" />
             </View>
-            <Text style={[styles.title, { color: colors.text }]}>CashBrain</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Create Account</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              Master your personal finances
+              Join CashBrain today
             </Text>
           </View>
 
           <View style={styles.form}>
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: colors.text }]}>Full Name</Text>
+              <View style={[styles.inputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+                <Ionicons name="person-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.input, { color: colors.text }]}
+                  placeholder="Enter your name"
+                  placeholderTextColor={colors.textMuted}
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                />
+              </View>
+            </View>
+
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: colors.text }]}>Email</Text>
               <View style={[styles.inputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
@@ -63,7 +79,7 @@ export function LoginScreen({ onLogin, onNavigateSignup }: LoginScreenProps) {
                 <Ionicons name="lock-closed-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
                 <TextInput
                   style={[styles.input, { color: colors.text }]}
-                  placeholder="Enter your password"
+                  placeholder="Create a password"
                   placeholderTextColor={colors.textMuted}
                   value={password}
                   onChangeText={setPassword}
@@ -75,18 +91,14 @@ export function LoginScreen({ onLogin, onNavigateSignup }: LoginScreenProps) {
               </View>
             </View>
 
-            <Pressable style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            <Pressable style={styles.signupButton} onPress={onSignup}>
+              <Text style={styles.signupButtonText}>Sign Up</Text>
             </Pressable>
 
-            <Pressable style={styles.loginButton} onPress={onLogin}>
-              <Text style={styles.loginButtonText}>Login</Text>
-            </Pressable>
-
-            <View style={styles.signupContainer}>
-              <Text style={[styles.signupText, { color: colors.textSecondary }]}>Don't have an account? </Text>
-              <Pressable onPress={onNavigateSignup}>
-                <Text style={styles.signupLink}>Sign up</Text>
+            <View style={styles.loginContainer}>
+              <Text style={[styles.loginText, { color: colors.textSecondary }]}>Already have an account? </Text>
+              <Pressable onPress={onNavigateLogin}>
+                <Text style={styles.loginLink}>Log in</Text>
               </Pressable>
             </View>
           </View>
@@ -167,43 +179,35 @@ const styles = StyleSheet.create({
   eyeButton: {
     padding: 8,
   },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: 32,
-  },
-  forgotPasswordText: {
-    color: '#1C4D8D',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  loginButton: {
+  signupButton: {
     backgroundColor: '#1C4D8D',
     height: 56,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
+    marginTop: 12,
     shadowColor: '#1C4D8D',
     shadowOpacity: 0.2,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 8,
     elevation: 4,
   },
-  loginButtonText: {
+  signupButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '800',
   },
-  signupContainer: {
+  loginContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  signupText: {
+  loginText: {
     fontSize: 14,
     fontWeight: '500',
   },
-  signupLink: {
+  loginLink: {
     color: '#1C4D8D',
     fontSize: 14,
     fontWeight: '700',

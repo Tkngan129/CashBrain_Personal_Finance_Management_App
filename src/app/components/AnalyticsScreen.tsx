@@ -180,9 +180,19 @@ export function AnalyticsScreen({ onAddTransaction }: AnalyticsScreenProps) {
   }, []);
 
   const calendarDayData = useMemo(() => {
-    const days = Array.from({ length: 30 }, (_, index) => {
+    const year = calendarMonthDate.getFullYear();
+    const month = calendarMonthDate.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    // Calculate padding for Monday start (0: Mon, 1: Tue... 6: Sun)
+    const firstDayOfWeek = new Date(year, month, 1).getDay();
+    const paddingCount = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
+
+    const days = Array.from({ length: daysInMonth }, (_, index) => {
       const day = index + 1;
-      const transactions = calendarTransactions.filter((tx) => tx.day === day);
+      // We keep the mock transactions tied to Apr 2026 for continuity
+      const isMockMonth = year === 2026 && month === 3;
+      const transactions = isMockMonth ? calendarTransactions.filter((tx) => tx.day === day) : [];
       const total = transactions.reduce((sum, tx) => sum + tx.amount, 0);
       return {
         day,
@@ -193,19 +203,29 @@ export function AnalyticsScreen({ onAddTransaction }: AnalyticsScreenProps) {
       };
     });
     
-    // Add 2 padding days for Wednesday start
-    const padded = [
-      { day: -1, transactions: [], total: 0, hasTransactions: false, isEmpty: true },
-      { day: 0, transactions: [], total: 0, hasTransactions: false, isEmpty: true },
-      ...days
-    ];
+    const padded = Array.from({ length: paddingCount }, (_, idx) => ({
+      day: -1 - idx,
+      transactions: [] as typeof calendarTransactions,
+      total: 0,
+      hasTransactions: false,
+      isEmpty: true,
+    })).concat(days);
+    
     return padded;
-  }, []);
+  }, [calendarMonthDate]);
 
   const selectedDayData = useMemo(
-    () => calendarDayData.find((item) => item.day === selectedCalendarDay && !item.isEmpty) ?? calendarDayData.find(item => !item.isEmpty) ?? calendarDayData[2],
+    () => calendarDayData.find((item) => item.day === selectedCalendarDay && !item.isEmpty) ?? calendarDayData.find(item => !item.isEmpty) ?? calendarDayData[0],
     [calendarDayData, selectedCalendarDay],
   );
+
+  const shiftCalendarMonth = (offset: number) => {
+    setCalendarMonthDate((prev) => {
+      const next = new Date(prev);
+      next.setMonth(next.getMonth() + offset);
+      return next;
+    });
+  };
 
   const overviewSummary = useMemo(() => {
     const formatMonthYear = (date: Date) => `${monthLabels[date.getMonth()]} ${date.getFullYear()}`;
@@ -582,13 +602,13 @@ export function AnalyticsScreen({ onAddTransaction }: AnalyticsScreenProps) {
           <View style={styles.calendarCard}>
             <View style={styles.calendarToolbarRow}>
               <View style={styles.calendarMonthPicker}>
-                <Pressable style={styles.calendarMonthNavButton}>
+                <Pressable style={styles.calendarMonthNavButton} onPress={() => shiftCalendarMonth(-1)}>
                   <Ionicons name="chevron-back" size={18} color="#64748b" />
                 </Pressable>
                 <Text style={styles.calendarMonth}>
                   {monthLabels[calendarMonthDate.getMonth()]} {calendarMonthDate.getFullYear()}
                 </Text>
-                <Pressable style={styles.calendarMonthNavButton}>
+                <Pressable style={styles.calendarMonthNavButton} onPress={() => shiftCalendarMonth(1)}>
                   <Ionicons name="chevron-forward" size={18} color="#64748b" />
                 </Pressable>
               </View>

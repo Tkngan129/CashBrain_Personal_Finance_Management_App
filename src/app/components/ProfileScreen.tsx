@@ -201,8 +201,6 @@ export function ProfileScreen({ onLogout }: { onLogout?: () => void }) {
         <Text style={styles.logoutText}>Log Out</Text>
       </Pressable>
 
-      {/* Footer */}
-      <Text style={[styles.footer, { color: colors.textMuted }]}>Version 1.0.0 · Made with ❤️</Text>
     </ScrollView>
   );
 }
