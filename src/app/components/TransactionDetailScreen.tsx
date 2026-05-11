@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Alert,
 } from 'react-native';
 import { resolveCategoryMeta } from '../../../constants/categories';
 import { useColors } from '../../context/ThemeContext';
@@ -34,6 +35,21 @@ export function TransactionDetailScreen({ transaction, onBack, onEdit, onDelete 
 
   const formatVND = (value: number) => {
     return Math.abs(value).toLocaleString('vi-VN');
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Confirm to delete?',
+      'This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive', 
+          onPress: () => onDelete?.(transaction) 
+        },
+      ]
+    );
   };
 
   return (
@@ -104,7 +120,7 @@ export function TransactionDetailScreen({ transaction, onBack, onEdit, onDelete 
 
       {/* Footer Buttons */}
       <View style={[styles.footer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
-        <Pressable style={styles.deleteButton} onPress={() => onDelete?.(transaction)}>
+        <Pressable style={styles.deleteButton} onPress={handleDelete}>
           <Ionicons name="trash-outline" size={20} color="#64748b" />
           <Text style={styles.deleteButtonText}>Delete</Text>
         </Pressable>

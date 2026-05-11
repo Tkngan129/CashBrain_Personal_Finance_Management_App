@@ -3,32 +3,27 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-const recentTransactions = [
-  { id: 1, title: 'Coffee & Breakfast', category: 'Food', amount: -45000, date: '2026-05-09', time: '09:30' },
-  { id: 2, title: 'Online Course', category: 'Education', amount: -399000, date: '2026-05-08', time: '14:15' },
-  { id: 3, title: 'Monthly Allowance', category: 'Income', amount: 4000000, date: '2026-04-30', time: '08:00' },
-  { id: 4, title: 'Grab to Uni', category: 'Transport', amount: -25000, date: '2026-04-09', time: '08:30' },
-  { id: 5, title: 'New Clothes', category: 'Shopping', amount: -250000, date: '2026-04-09', time: '15:45' },
-  { id: 6, title: 'Coffee & Breakfast', category: 'Food', amount: -45000, date: '2026-04-11', time: '09:30' },
-];
+import { useTransactions } from '../../context/TransactionContext';
 
 interface Props {
   onClose?: () => void;
+  onTransactionPress?: (tx: any) => void;
 }
 
 const formatVND = (value: number) => `${new Intl.NumberFormat('vi-VN').format(Math.abs(value))} VND`;
 
-export function AllTransactionsScreen({ onClose }: Props) {
+export function AllTransactionsScreen({ onClose, onTransactionPress }: Props) {
+  const { transactions } = useTransactions();
   const grouped = useMemo(() => {
-    const groups: Record<string, typeof recentTransactions> = {} as any;
-    recentTransactions.forEach((tx) => {
+    const groups: Record<string, typeof transactions> = {} as any;
+    transactions.forEach((tx) => {
       const key = tx.date;
       if (!groups[key]) groups[key] = [];
       groups[key].push(tx);
     });
     return Object.keys(groups)
       .sort((a, b) => (a < b ? 1 : -1))
-      .map((date) => ({ date, items: groups[date].sort((x, y) => y.time.localeCompare(x.time)) }));
+      .map((date) => ({ date, items: groups[date].sort((x, y) => (y.time || '').localeCompare(x.time || '')) }));
   }, []);
 
   return (
@@ -47,7 +42,7 @@ export function AllTransactionsScreen({ onClose }: Props) {
             {g.items.map((tx) => {
               const categoryMeta = resolveCategoryMeta(tx.category);
               return (
-              <View key={tx.id} style={styles.transactionItem}>
+              <Pressable key={tx.id} style={styles.transactionItem} onPress={() => onTransactionPress?.(tx)}>
                 <View style={[styles.transactionIcon, { backgroundColor: categoryMeta.bgColor }]}> 
                   <Ionicons name={categoryMeta.icon as any} size={22} color={categoryMeta.color} />
                 </View>
@@ -61,7 +56,7 @@ export function AllTransactionsScreen({ onClose }: Props) {
                   </Text>
                   <Text style={styles.transactionMeta}>{tx.date} · {tx.time}</Text>
                 </View>
-              </View>
+              </Pressable>
               );
             })}
           </View>

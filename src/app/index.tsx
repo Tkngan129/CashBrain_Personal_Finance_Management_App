@@ -122,6 +122,11 @@ function AppInner() {
 				return (
 					<AllTransactionsScreen
 						onClose={() => setActiveScreen('home')}
+            onTransactionPress={(tx) => {
+              setSelectedTransaction(tx);
+              setActiveReturnScreen('transactions');
+              setActiveScreen('transactionDetail');
+            }}
 					/>
 				);
 
