@@ -1,14 +1,14 @@
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
   Pressable,
   ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useColors } from '../../context/ThemeContext';
 import { resolveCategoryMeta } from '../../../constants/categories';
+import { useColors } from '../../context/ThemeContext';
 
 export interface Transaction {
   id: number | string;
@@ -31,7 +31,7 @@ export function TransactionDetailScreen({ transaction, onBack, onEdit, onDelete 
   const colors = useColors();
   const categoryMeta = resolveCategoryMeta(transaction.category);
   const isIncome = transaction.amount > 0;
-  
+
   const formatVND = (value: number) => {
     return Math.abs(value).toLocaleString('vi-VN');
   };
@@ -162,8 +162,8 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   iconWrap: {
-    width: 80,
-    height: 80,
+    width: 60,
+    height: 60,
     borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   amountValue: {
-    fontSize: 42,
+    fontSize: 30,
     fontWeight: '900',
     marginBottom: 16,
   },
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   editButton: {
-    flex: 1.5,
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

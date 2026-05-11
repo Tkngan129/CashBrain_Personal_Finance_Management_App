@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Svg, { Circle, G } from 'react-native-svg';
 import { useColors } from '../../context/ThemeContext';
+import { useTransactions } from '../../context/TransactionContext';
 
 type AnalyticsTab = 'expenses' | 'calendar' | 'overview';
 type RangeTab = 'week' | 'month' | 'year';
@@ -153,10 +154,11 @@ export function AnalyticsScreen({ onAddTransaction, onTransactionPress }: Analyt
   const [overviewActiveMetric, setOverviewActiveMetric] = useState<'expenses' | 'income'>('expenses');
   const [showAllCategories, setShowAllCategories] = useState(false);
   const colors = useColors();
+  const { transactions } = useTransactions();
 
   const groupedExpenseTransactions = useMemo(() => {
-    const groups: Record<string, typeof expenseTransactions> = {};
-    expenseTransactions.forEach((tx) => {
+    const groups: Record<string, typeof transactions> = {};
+    transactions.forEach((tx) => {
       const key = tx.date;
       if (!groups[key]) groups[key] = [];
       groups[key].push(tx);

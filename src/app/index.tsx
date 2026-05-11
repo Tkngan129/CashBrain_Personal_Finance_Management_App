@@ -21,9 +21,11 @@ import { EditProfileScreen } from './components/EditProfileScreen';
 import { BudgetSettingsScreen } from './components/BudgetSettingsScreen';
 import { PaymentMethodsScreen } from './components/PaymentMethodsScreen';
 import { TransactionDetailScreen, Transaction } from './components/TransactionDetailScreen';
+import { EditTransactionScreen } from './components/EditTransactionScreen';
 import { LoginScreen } from './components/LoginScreen';
 import { SignupScreen } from './components/SignupScreen';
 import { ThemeProvider, useColors } from '../context/ThemeContext';
+import { TransactionProvider, useTransactions } from '../context/TransactionContext';
 
 type ScreenId =
 	| 'home'
@@ -37,7 +39,8 @@ type ScreenId =
 	| 'editProfile'
 	| 'budget'
 	| 'payment'
-	| 'transactionDetail';
+	| 'transactionDetail'
+	| 'editTransaction';
 
 interface NavItem {
 	id: ScreenId;
@@ -58,13 +61,16 @@ const RIGHT_NAV: NavItem[] = [
 export default function App() {
   return (
     <ThemeProvider>
-      <AppInner />
+      <TransactionProvider>
+        <AppInner />
+      </TransactionProvider>
     </ThemeProvider>
   );
 }
 
 function AppInner() {
 	const colors = useColors();
+  const { updateTransaction, deleteTransaction } = useTransactions();
 	const [activeScreen, setActiveScreen] =
 		useState<ScreenId>('home');
   const [activeReturnScreen, setActiveReturnScreen] = useState<ScreenId>('home');
@@ -159,6 +165,25 @@ function AppInner() {
 					<TransactionDetailScreen
 						transaction={selectedTransaction}
 						onBack={() => setActiveScreen(activeReturnScreen)}
+						onEdit={() => setActiveScreen('editTransaction')}
+            onDelete={() => {
+              deleteTransaction(selectedTransaction.id);
+              setActiveScreen(activeReturnScreen);
+            }}
+					/>
+				);
+
+			case 'editTransaction':
+				if (!selectedTransaction) return null;
+				return (
+					<EditTransactionScreen
+						transaction={selectedTransaction}
+						onCancel={() => setActiveScreen('transactionDetail')}
+						onSave={(updatedTx) => {
+							setSelectedTransaction(updatedTx);
+              updateTransaction(updatedTx);
+							setActiveScreen('transactionDetail');
+						}}
 					/>
 				);
 

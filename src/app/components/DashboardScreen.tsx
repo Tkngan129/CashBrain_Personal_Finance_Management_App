@@ -10,6 +10,7 @@ import {
     View,
 } from 'react-native';
 import { useColors } from '../../context/ThemeContext';
+import { useTransactions } from '../../context/TransactionContext';
 
 const { width } = Dimensions.get('window');
 const scale = width / 375;
@@ -19,14 +20,6 @@ const TOTAL_SPENT = 719_000;
 const REMAINING = TOTAL_BUDGET - TOTAL_SPENT;
 const REMAINING_PCT = Math.round((REMAINING / TOTAL_BUDGET) * 100);
 
-const recentTransactions = [
-  { id: 1, title: 'Coffee & Breakfast', category: 'Food & Drinks', amount: -45000, date: '2026-05-09', time: '09:30' },
-  { id: 2, title: 'Online Course', category: 'Education', amount: -399000, date: '2026-05-08', time: '14:15' },
-  { id: 3, title: 'Monthly Allowance', category: 'Income', amount: 4000000, date: '2026-04-30', time: '08:00' },
-  { id: 4, title: 'Grab to Uni', category: 'Transportation', amount: -25000, date: '2026-04-09', time: '08:30' },
-  { id: 5, title: 'New Clothes', category: 'Shopping', amount: -250000, date: '2026-04-09', time: '15:45' },
-  { id: 6, title: 'Coffee & Breakfast', category: 'Food & Drinks', amount: -45000, date: '2026-04-11', time: '09:30' },
-];
 
 const weekData = [
   { day: 'Mon', amount: 24_000, active: false },
@@ -50,6 +43,8 @@ const formatVND = (value: number) => `${new Intl.NumberFormat('vi-VN').format(Ma
 
 export function DashboardScreen({ onNavigate, onAddTransaction, onTransactionPress }: DashboardScreenProps) {
   const colors = useColors();
+  const { transactions } = useTransactions();
+  const recentTransactions = transactions.slice(0, 6);
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.bg }]} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={[styles.header, { backgroundColor: colors.bg }]}>
