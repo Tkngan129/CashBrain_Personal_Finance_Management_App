@@ -16,6 +16,11 @@ import { AnalyticsScreen } from './components/AnalyticsScreen';
 import { CameraScreen } from './components/CameraScreen';
 import { DashboardScreen } from './components/DashboardScreen';
 import { ProfileScreen } from './components/ProfileScreen';
+import { ManageCategoriesScreen } from './components/ManageCategoriesScreen';
+import { EditProfileScreen } from './components/EditProfileScreen';
+import { BudgetSettingsScreen } from './components/BudgetSettingsScreen';
+import { PaymentMethodsScreen } from './components/PaymentMethodsScreen';
+import { TransactionDetailScreen, Transaction } from './components/TransactionDetailScreen';
 import { LoginScreen } from './components/LoginScreen';
 import { SignupScreen } from './components/SignupScreen';
 import { ThemeProvider, useColors } from '../context/ThemeContext';
@@ -27,7 +32,12 @@ type ScreenId =
 	| 'transactions'
 	| 'chat'
 	| 'profile'
-	| 'camera';
+	| 'camera'
+	| 'categories'
+	| 'editProfile'
+	| 'budget'
+	| 'payment'
+	| 'transactionDetail';
 
 interface NavItem {
 	id: ScreenId;
@@ -57,6 +67,8 @@ function AppInner() {
 	const colors = useColors();
 	const [activeScreen, setActiveScreen] =
 		useState<ScreenId>('home');
+  const [activeReturnScreen, setActiveReturnScreen] = useState<ScreenId>('home');
+	const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 	const [isAuthenticated, setIsAuthenticated] = useState(false);
 	const [authScreen, setAuthScreen] = useState<'login' | 'signup'>('login');
 	const [addTransactionType, setAddTransactionType] =
@@ -80,21 +92,25 @@ function AppInner() {
 	const getScreenContent = () => {
 		switch (activeScreen) {
 			case 'home':
-				return (
-					<DashboardScreen
-						onNavigate={handleNavigate}
-						onAddTransaction={
-							handleAddTransaction
-						}
-					/>
-				);
+				return <DashboardScreen 
+          onNavigate={setActiveScreen} 
+          onAddTransaction={handleAddTransaction}
+          onTransactionPress={(tx) => {
+            setSelectedTransaction(tx);
+            setActiveReturnScreen('home');
+            setActiveScreen('transactionDetail');
+          }}
+        />;
 
 			case 'analytics':
-				return (
-					<AnalyticsScreen
-						onAddTransaction={(type) => handleAddTransaction(type, 'analytics')}
-					/>
-				);
+				return <AnalyticsScreen 
+          onAddTransaction={(type) => handleAddTransaction(type, 'analytics')}
+          onTransactionPress={(tx) => {
+            setSelectedTransaction(tx as any);
+            setActiveReturnScreen('analytics');
+            setActiveScreen('transactionDetail');
+          }}
+        />;
 
 			case 'transactions':
 				return (
@@ -117,10 +133,34 @@ function AppInner() {
 				return <AIChatScreen />;
 
 			case 'profile':
-				return <ProfileScreen onLogout={() => setIsAuthenticated(false)} />;
+				return <ProfileScreen 
+          onLogout={() => setIsAuthenticated(false)} 
+          onNavigateCategories={() => setActiveScreen('categories')} 
+          onNavigateEditProfile={() => setActiveScreen('editProfile')}
+          onNavigateBudget={() => setActiveScreen('budget')}
+          onNavigatePayment={() => setActiveScreen('payment')}
+        />;
+
+			case 'categories':
+				return <ManageCategoriesScreen onBack={() => setActiveScreen('profile')} />;
+			case 'editProfile':
+				return <EditProfileScreen onBack={() => setActiveScreen('profile')} />;
+			case 'budget':
+				return <BudgetSettingsScreen onBack={() => setActiveScreen('profile')} />;
+			case 'payment':
+				return <PaymentMethodsScreen onBack={() => setActiveScreen('profile')} />;
 
 			case 'camera':
 				return <CameraScreen />;
+
+			case 'transactionDetail':
+				if (!selectedTransaction) return null;
+				return (
+					<TransactionDetailScreen
+						transaction={selectedTransaction}
+						onBack={() => setActiveScreen(activeReturnScreen)}
+					/>
+				);
 
 			default:
 				return (

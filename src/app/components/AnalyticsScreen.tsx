@@ -132,9 +132,10 @@ const formatCompactMoney = (value: number) => {
 
 interface AnalyticsScreenProps {
   onAddTransaction?: (type: 'expense' | 'income') => void;
+  onTransactionPress?: (tx: any) => void;
 }
 
-export function AnalyticsScreen({ onAddTransaction }: AnalyticsScreenProps) {
+export function AnalyticsScreen({ onAddTransaction, onTransactionPress }: AnalyticsScreenProps) {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('expenses');
   const [rangeTab, setRangeTab] = useState<RangeTab>('month');
   const [draftRangeTab, setDraftRangeTab] = useState<RangeTab>('month');
@@ -570,7 +571,7 @@ export function AnalyticsScreen({ onAddTransaction }: AnalyticsScreenProps) {
                   {g.items.map((tx) => {
                     const categoryMeta = getAnalyticsCategoryMeta(tx.category);
                     return (
-                      <View key={tx.id} style={[styles.transactionCard, { backgroundColor: colors.transactionCard }]}>
+                      <Pressable key={tx.id} onPress={() => onTransactionPress?.(tx)} style={[styles.transactionCard, { backgroundColor: colors.transactionCard }]}>
                         <View style={[styles.transactionIcon, { backgroundColor: categoryMeta.bgColor }]}>
                           <Ionicons name={categoryMeta.icon as any} size={22} color={categoryMeta.color} />
                         </View>
@@ -587,7 +588,7 @@ export function AnalyticsScreen({ onAddTransaction }: AnalyticsScreenProps) {
                           </Text>
                           <Text style={[styles.transactionCategory, { color: colors.textMuted }]}>{categoryMeta.label}</Text>
                         </View>
-                      </View>
+                      </Pressable>
                     );
                   })}
                 </View>
@@ -689,7 +690,7 @@ export function AnalyticsScreen({ onAddTransaction }: AnalyticsScreenProps) {
                     const categoryMeta = getAnalyticsCategoryMeta(tx.category);
                     const isIncome = tx.amount > 0;
                     return (
-                      <View key={tx.id} style={styles.selectedDayItem}>
+                      <Pressable key={tx.id} onPress={() => onTransactionPress?.(tx)} style={styles.selectedDayItem}>
                         <View style={[styles.selectedDayIcon, { backgroundColor: categoryMeta.bgColor }]}>
                           <Ionicons name={categoryMeta.icon as any} size={22} color={categoryMeta.color} />
                         </View>
@@ -703,7 +704,7 @@ export function AnalyticsScreen({ onAddTransaction }: AnalyticsScreenProps) {
                           </Text>
                           <Text style={styles.selectedDayTransactionCategory}>{categoryMeta.label}</Text>
                         </View>
-                      </View>
+                      </Pressable>
                     );
                   })
                 ) : (

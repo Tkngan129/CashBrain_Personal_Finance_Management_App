@@ -27,13 +27,15 @@ type MenuItemProps = {
   toggle?: boolean;
   toggleValue?: boolean;
   onToggle?: (v: boolean) => void;
+  onPress?: () => void;
   colors: ReturnType<typeof import('../../context/ThemeContext').useColors>;
 };
 
-function MenuItem({ icon, iconBg, iconColor, label, subtitle, last, toggle, toggleValue, onToggle, colors }: MenuItemProps) {
+function MenuItem({ icon, iconBg, iconColor, label, subtitle, last, toggle, toggleValue, onToggle, onPress, colors }: MenuItemProps) {
   return (
     <Pressable
       style={[styles.menuItem, last && styles.menuItemLast, { borderBottomColor: colors.border }]}
+      onPress={onPress}
     >
       <View style={[styles.menuIcon, { backgroundColor: iconBg }]}>
         <Ionicons name={icon} size={18} color={iconColor} />
@@ -56,7 +58,19 @@ function MenuItem({ icon, iconBg, iconColor, label, subtitle, last, toggle, togg
   );
 }
 
-export function ProfileScreen({ onLogout }: { onLogout?: () => void }) {
+export function ProfileScreen({ 
+  onLogout, 
+  onNavigateCategories,
+  onNavigateEditProfile,
+  onNavigateBudget,
+  onNavigatePayment
+}: { 
+  onLogout?: () => void; 
+  onNavigateCategories?: () => void;
+  onNavigateEditProfile?: () => void;
+  onNavigateBudget?: () => void;
+  onNavigatePayment?: () => void;
+}) {
   const { isDark, setDark } = useTheme();
   const colors = useColors();
   return (
@@ -159,7 +173,7 @@ export function ProfileScreen({ onLogout }: { onLogout?: () => void }) {
       {/* Categories */}
       <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>CATEGORIES</Text>
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-        <Pressable style={[styles.menuItem, styles.menuItemLast]}>
+        <Pressable style={[styles.menuItem, styles.menuItemLast]} onPress={onNavigateCategories}>
           <View style={[styles.menuIcon, { backgroundColor: '#fff7ed' }]}>
             <Ionicons name="pricetag-outline" size={18} color="#f97316" />
           </View>
@@ -174,9 +188,9 @@ export function ProfileScreen({ onLogout }: { onLogout?: () => void }) {
       {/* Account */}
       <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>ACCOUNT</Text>
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-        <MenuItem icon="person-outline" iconBg="#eff6ff" iconColor="#3b82f6" label="Edit Profile" subtitle="Name, email, avatar" colors={colors} />
-        <MenuItem icon="gift-outline" iconBg="#f5f3ff" iconColor="#8b5cf6" label="Budget Settings" subtitle="Monthly limits" colors={colors} />
-        <MenuItem icon="card-outline" iconBg="#f0fdf4" iconColor="#22c55e" label="Payment Methods" subtitle="Cards & accounts" last colors={colors} />
+        <MenuItem icon="person-outline" iconBg="#eff6ff" iconColor="#3b82f6" label="Edit Profile" subtitle="Name, email, avatar" onPress={onNavigateEditProfile} colors={colors} />
+        <MenuItem icon="gift-outline" iconBg="#f5f3ff" iconColor="#8b5cf6" label="Budget Settings" subtitle="Monthly limits" onPress={onNavigateBudget} colors={colors} />
+        <MenuItem icon="card-outline" iconBg="#f0fdf4" iconColor="#22c55e" label="Payment Methods" subtitle="Cards & accounts" onPress={onNavigatePayment} last colors={colors} />
       </View>
 
       {/* Personalize */}

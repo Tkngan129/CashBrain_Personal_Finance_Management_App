@@ -43,11 +43,12 @@ fontSize: 28 * scale
 interface DashboardScreenProps {
   onNavigate?: (screen: string) => void;
   onAddTransaction?: (type: 'expense' | 'income') => void;
+  onTransactionPress?: (transaction: any) => void;
 }
 
 const formatVND = (value: number) => `${new Intl.NumberFormat('vi-VN').format(Math.abs(value))} VND`;
 
-export function DashboardScreen({ onNavigate, onAddTransaction }: DashboardScreenProps) {
+export function DashboardScreen({ onNavigate, onAddTransaction, onTransactionPress }: DashboardScreenProps) {
   const colors = useColors();
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.bg }]} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -197,8 +198,9 @@ export function DashboardScreen({ onNavigate, onAddTransaction }: DashboardScree
           {recentTransactions.map((tx, index) => {
             const categoryMeta = resolveCategoryMeta(tx.category);
             return (
-            <View
+            <Pressable
               key={tx.id}
+              onPress={() => onTransactionPress?.(tx)}
               style={[
                 styles.transactionItem,
                 { borderBottomColor: colors.border },
@@ -215,7 +217,7 @@ export function DashboardScreen({ onNavigate, onAddTransaction }: DashboardScree
               <Text style={[styles.transactionAmount, { color: tx.amount > 0 ? '#1ca34a' : '#ef4444' }]}>
                 {tx.amount > 0 ? '+' : '-'}{formatVND(tx.amount)}
               </Text>
-            </View>
+            </Pressable>
             );
           })}
         </View>
