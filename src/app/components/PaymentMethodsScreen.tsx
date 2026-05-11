@@ -11,11 +11,25 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useColors } from '../../context/ThemeContext';
 
+export type PaymentMethod = {
+  id: string;
+  type: 'card' | 'bank';
+  name: string; // cardholder or account name
+  number: string;
+  expiry?: string;
+  cvv?: string;
+  bankName?: string;
+  cardBrand?: string;
+  color?: string;
+};
+
 interface PaymentMethodsScreenProps {
   onBack: () => void;
+  onAddPayment?: () => void;
+  paymentMethods?: PaymentMethod[];
 }
 
-export function PaymentMethodsScreen({ onBack }: PaymentMethodsScreenProps) {
+export function PaymentMethodsScreen({ onBack, onAddPayment, paymentMethods = [] }: PaymentMethodsScreenProps) {
   const colors = useColors();
   const [activeTab, setActiveTab] = useState<'cards' | 'accounts'>('cards');
 
@@ -27,7 +41,7 @@ export function PaymentMethodsScreen({ onBack }: PaymentMethodsScreenProps) {
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Payment Methods</Text>
-        <Pressable style={styles.addButton}>
+        <Pressable style={styles.addButton} onPress={onAddPayment}>
           <Ionicons name="add" size={24} color="#1C4D8D" />
         </Pressable>
       </View>
@@ -54,48 +68,36 @@ export function PaymentMethodsScreen({ onBack }: PaymentMethodsScreenProps) {
         </View>
       </View>
 
-      {/* Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {activeTab === 'cards' ? (
-          <View style={styles.list}>
-            <View style={[styles.card, { backgroundColor: '#1C4D8D', borderColor: '#1C4D8D' }]}>
-              <View style={styles.cardTop}>
-                <Ionicons name="logo-apple" size={24} color="#ffffff" />
-                <Text style={styles.cardType}>Visa</Text>
-              </View>
-              <Text style={styles.cardNumber}>**** **** **** 1234</Text>
-              <View style={styles.cardBottom}>
-                <Text style={styles.cardHolder}>Ngan Tran</Text>
-                <Text style={styles.cardExpiry}>12/28</Text>
-              </View>
-            </View>
-            
-            <View style={[styles.card, { backgroundColor: '#f43f5e', borderColor: '#f43f5e' }]}>
-              <View style={styles.cardTop}>
-                <Ionicons name="wallet-outline" size={24} color="#ffffff" />
-                <Text style={styles.cardType}>MasterCard</Text>
-              </View>
-              <Text style={styles.cardNumber}>**** **** **** 9876</Text>
-              <View style={styles.cardBottom}>
-                <Text style={styles.cardHolder}>Ngan Tran</Text>
-                <Text style={styles.cardExpiry}>05/27</Text>
-              </View>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.list}>
-            <View style={[styles.accountCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-              <View style={[styles.iconWrap, { backgroundColor: '#ecfdf5' }]}>
-                <Ionicons name="business" size={20} color="#22c55e" />
-              </View>
-              <View style={styles.accountInfo}>
-                <Text style={[styles.accountName, { color: colors.text }]}>Vietcombank</Text>
-                <Text style={[styles.accountDetail, { color: colors.textMuted }]}>Checking · ***4567</Text>
-              </View>
-              <Ionicons name="ellipsis-horizontal" size={20} color={colors.textMuted} />
-            </View>
-          </View>
-        )}
+        <View style={styles.list}>
+          {activeTab === 'cards' 
+            ? paymentMethods.filter(p => p.type === 'card').map(card => (
+                <View key={card.id} style={[styles.card, { backgroundColor: card.color || '#1C4D8D', borderColor: card.color || '#1C4D8D' }]}>
+                  <View style={styles.cardTop}>
+                    <Ionicons name={card.cardBrand === 'Visa' ? 'logo-apple' : 'wallet-outline'} size={24} color="#ffffff" />
+                    <Text style={styles.cardType}>{card.cardBrand || 'Card'}</Text>
+                  </View>
+                  <Text style={styles.cardNumber}>**** **** **** {card.number.slice(-4) || '0000'}</Text>
+                  <View style={styles.cardBottom}>
+                    <Text style={styles.cardHolder}>{card.name}</Text>
+                    <Text style={styles.cardExpiry}>{card.expiry}</Text>
+                  </View>
+                </View>
+              ))
+            : paymentMethods.filter(p => p.type === 'bank').map(bank => (
+                <View key={bank.id} style={[styles.accountCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+                  <View style={[styles.iconWrap, { backgroundColor: '#ecfdf5' }]}>
+                    <Ionicons name="business" size={20} color="#22c55e" />
+                  </View>
+                  <View style={styles.accountInfo}>
+                    <Text style={[styles.accountName, { color: colors.text }]}>{bank.bankName}</Text>
+                    <Text style={[styles.accountDetail, { color: colors.textMuted }]}>Checking · ***{bank.number.slice(-4) || '0000'}</Text>
+                  </View>
+                  <Ionicons name="ellipsis-horizontal" size={20} color={colors.textMuted} />
+                </View>
+              ))
+          }
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );

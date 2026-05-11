@@ -23,6 +23,8 @@ import { PaymentMethodsScreen } from './components/PaymentMethodsScreen';
 import { TransactionDetailScreen, Transaction } from './components/TransactionDetailScreen';
 import { EditTransactionScreen } from './components/EditTransactionScreen';
 import { EditCategoryScreen, Category } from './components/EditCategoryScreen';
+import { PaymentMethod } from './components/PaymentMethodsScreen';
+import { AddPaymentMethodScreen } from './components/AddPaymentMethodScreen';
 import { LoginScreen } from './components/LoginScreen';
 import { SignupScreen } from './components/SignupScreen';
 import { ThemeProvider, useColors } from '../context/ThemeContext';
@@ -42,7 +44,8 @@ type ScreenId =
 	| 'payment'
 	| 'transactionDetail'
 	| 'editTransaction'
-	| 'editCategory';
+	| 'editCategory'
+  | 'addPaymentMethod';
 
 interface NavItem {
 	id: ScreenId;
@@ -80,6 +83,11 @@ function AppInner() {
 	const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
   const [totalBudget, setTotalBudget] = useState<number>(4000000);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([
+    { id: '1', type: 'card', name: 'Ngan Tran', number: '1234567812341234', expiry: '12/28', cardBrand: 'Visa', color: '#1C4D8D' },
+    { id: '2', type: 'card', name: 'Ngan Tran', number: '9876543298769876', expiry: '05/27', cardBrand: 'MasterCard', color: '#f43f5e' },
+    { id: '3', type: 'bank', name: 'Ngan Tran', number: '4567', bankName: 'Vietcombank' }
+  ]);
 	const [isAuthenticated, setIsAuthenticated] = useState(false);
 	const [authScreen, setAuthScreen] = useState<'login' | 'signup'>('login');
 	const [addTransactionType, setAddTransactionType] =
@@ -192,7 +200,26 @@ function AppInner() {
           onBack={() => setActiveScreen('profile')} 
         />;
 			case 'payment':
-				return <PaymentMethodsScreen onBack={() => setActiveScreen('profile')} />;
+				return <PaymentMethodsScreen 
+          paymentMethods={paymentMethods}
+          onBack={() => setActiveScreen('profile')} 
+          onAddPayment={() => setActiveScreen('addPaymentMethod')}
+        />;
+
+      case 'addPaymentMethod':
+        return <AddPaymentMethodScreen
+          onBack={() => setActiveScreen('payment')}
+          onSave={(method) => {
+            const newMethod: PaymentMethod = {
+              ...method,
+              id: Date.now().toString(),
+              cardBrand: method.type === 'card' ? (method.number.startsWith('4') ? 'Visa' : 'MasterCard') : undefined,
+              color: method.type === 'card' ? (method.number.startsWith('4') ? '#1C4D8D' : '#f43f5e') : undefined
+            };
+            setPaymentMethods(prev => [newMethod, ...prev]);
+            setActiveScreen('payment');
+          }}
+        />;
 
 			case 'camera':
 				return <CameraScreen />;
@@ -238,7 +265,19 @@ function AppInner() {
 	};
 
 	const renderNavItem = (item: NavItem) => {
-		const isActive = activeScreen === item.id;
+		const isProfileGroup = [
+      'profile', 
+      'editProfile', 
+      'categories', 
+      'editCategory', 
+      'budget', 
+      'payment', 
+      'addPaymentMethod'
+    ].includes(activeScreen);
+
+		const isActive = 
+      activeScreen === item.id || 
+      (item.id === 'profile' && isProfileGroup);
 
 		return (
 			<Pressable

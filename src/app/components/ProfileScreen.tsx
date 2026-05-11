@@ -66,6 +66,7 @@ export function ProfileScreen({
   onNavigatePayment
 }: {
   userAvatar?: string | null;
+  totalBudget?: number;
   onLogout?: () => void;
   onNavigateCategories?: () => void;
   onNavigateEditProfile?: () => void;
