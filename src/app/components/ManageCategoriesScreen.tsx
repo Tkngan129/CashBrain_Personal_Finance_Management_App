@@ -12,9 +12,10 @@ import { categoryGroups } from '../../../constants/categories';
 
 interface ManageCategoriesScreenProps {
   onBack: () => void;
+  onEditCategory?: (category: any) => void;
 }
 
-export function ManageCategoriesScreen({ onBack }: ManageCategoriesScreenProps) {
+export function ManageCategoriesScreen({ onBack, onEditCategory }: ManageCategoriesScreenProps) {
   const colors = useColors();
   const [activeTab, setActiveTab] = useState<'expense' | 'income'>('expense');
 
@@ -67,7 +68,7 @@ export function ManageCategoriesScreen({ onBack }: ManageCategoriesScreenProps) 
                         <Ionicons name={cat.icon as any} size={18} color={cat.color} />
                       </View>
                       <Text style={[styles.categoryName, { color: colors.text }]}>{cat.label}</Text>
-                      <Pressable style={styles.editButton}>
+                      <Pressable style={styles.editButton} onPress={() => onEditCategory?.(cat)}>
                         <Ionicons name="pencil" size={16} color={colors.textMuted} />
                       </Pressable>
                     </View>
@@ -86,7 +87,7 @@ export function ManageCategoriesScreen({ onBack }: ManageCategoriesScreenProps) 
                     <Ionicons name="wallet-outline" size={18} color="#22c55e" />
                   </View>
                   <Text style={[styles.categoryName, { color: colors.text }]}>Salary</Text>
-                  <Pressable style={styles.editButton}>
+                  <Pressable style={styles.editButton} onPress={() => onEditCategory?.({ id: 901, label: 'Salary', icon: 'wallet-outline', color: '#22c55e' })}>
                     <Ionicons name="pencil" size={16} color={colors.textMuted} />
                   </Pressable>
                 </View>
@@ -95,7 +96,7 @@ export function ManageCategoriesScreen({ onBack }: ManageCategoriesScreenProps) 
                     <Ionicons name="business-outline" size={18} color="#3b82f6" />
                   </View>
                   <Text style={[styles.categoryName, { color: colors.text }]}>Freelance</Text>
-                  <Pressable style={styles.editButton}>
+                  <Pressable style={styles.editButton} onPress={() => onEditCategory?.({ id: 902, label: 'Freelance', icon: 'business-outline', color: '#3b82f6' })}>
                     <Ionicons name="pencil" size={16} color={colors.textMuted} />
                   </Pressable>
                 </View>

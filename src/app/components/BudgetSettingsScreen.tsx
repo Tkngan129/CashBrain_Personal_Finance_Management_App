@@ -14,11 +14,30 @@ import { useColors } from '../../context/ThemeContext';
 
 interface BudgetSettingsScreenProps {
   onBack: () => void;
+  initialBudget?: number;
+  onSaveBudget?: (budget: number) => void;
 }
 
-export function BudgetSettingsScreen({ onBack }: BudgetSettingsScreenProps) {
+export function BudgetSettingsScreen({ onBack, initialBudget = 4000000, onSaveBudget }: BudgetSettingsScreenProps) {
   const colors = useColors();
   const [activeTab, setActiveTab] = useState<'monthly' | 'yearly'>('monthly');
+
+  const [monthlyLimit, setMonthlyLimit] = useState((initialBudget).toLocaleString('en-US'));
+  const [yearlyLimit, setYearlyLimit] = useState((initialBudget * 12).toLocaleString('en-US'));
+
+  const handleLimitChange = (text: string) => {
+    const numericText = text.replace(/[^0-9]/g, '');
+    if (!numericText) {
+      activeTab === 'monthly' ? setMonthlyLimit('') : setYearlyLimit('');
+      return;
+    }
+    const formatted = parseInt(numericText, 10).toLocaleString('en-US'); // en-US uses commas
+    if (activeTab === 'monthly') {
+      setMonthlyLimit(formatted);
+    } else {
+      setYearlyLimit(formatted);
+    }
+  };
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.container, { backgroundColor: colors.bg }]}>
@@ -28,7 +47,13 @@ export function BudgetSettingsScreen({ onBack }: BudgetSettingsScreenProps) {
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Budget Settings</Text>
-        <Pressable style={styles.saveButton}>
+        <Pressable style={styles.saveButton} onPress={() => {
+          const raw = activeTab === 'monthly' ? monthlyLimit : yearlyLimit;
+          const numericValue = parseInt(raw.replace(/[^0-9]/g, ''), 10) || 0;
+          const finalMonthly = activeTab === 'monthly' ? numericValue : Math.round(numericValue / 12);
+          onSaveBudget?.(finalMonthly);
+          onBack();
+        }}>
           <Text style={styles.saveButtonText}>Save</Text>
         </Pressable>
       </View>
@@ -70,7 +95,8 @@ export function BudgetSettingsScreen({ onBack }: BudgetSettingsScreenProps) {
                 <Text style={[styles.currencySymbol, { color: colors.text }]}>VND</Text>
                 <TextInput
                   style={[styles.input, { color: colors.text }]}
-                  defaultValue={activeTab === 'monthly' ? "4,000,000" : "48,000,000"}
+                  value={activeTab === 'monthly' ? monthlyLimit : yearlyLimit}
+                  onChangeText={handleLimitChange}
                   keyboardType="numeric"
                 />
               </View>

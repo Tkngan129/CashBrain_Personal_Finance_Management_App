@@ -22,6 +22,7 @@ import { BudgetSettingsScreen } from './components/BudgetSettingsScreen';
 import { PaymentMethodsScreen } from './components/PaymentMethodsScreen';
 import { TransactionDetailScreen, Transaction } from './components/TransactionDetailScreen';
 import { EditTransactionScreen } from './components/EditTransactionScreen';
+import { EditCategoryScreen, Category } from './components/EditCategoryScreen';
 import { LoginScreen } from './components/LoginScreen';
 import { SignupScreen } from './components/SignupScreen';
 import { ThemeProvider, useColors } from '../context/ThemeContext';
@@ -40,7 +41,8 @@ type ScreenId =
 	| 'budget'
 	| 'payment'
 	| 'transactionDetail'
-	| 'editTransaction';
+	| 'editTransaction'
+	| 'editCategory';
 
 interface NavItem {
 	id: ScreenId;
@@ -75,6 +77,9 @@ function AppInner() {
 		useState<ScreenId>('home');
   const [activeReturnScreen, setActiveReturnScreen] = useState<ScreenId>('home');
 	const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+	const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [userAvatar, setUserAvatar] = useState<string | null>(null);
+  const [totalBudget, setTotalBudget] = useState<number>(4000000);
 	const [isAuthenticated, setIsAuthenticated] = useState(false);
 	const [authScreen, setAuthScreen] = useState<'login' | 'signup'>('login');
 	const [addTransactionType, setAddTransactionType] =
@@ -145,6 +150,8 @@ function AppInner() {
 
 			case 'profile':
 				return <ProfileScreen 
+          userAvatar={userAvatar}
+          totalBudget={totalBudget}
           onLogout={() => setIsAuthenticated(false)} 
           onNavigateCategories={() => setActiveScreen('categories')} 
           onNavigateEditProfile={() => setActiveScreen('editProfile')}
@@ -153,11 +160,37 @@ function AppInner() {
         />;
 
 			case 'categories':
-				return <ManageCategoriesScreen onBack={() => setActiveScreen('profile')} />;
+				return <ManageCategoriesScreen 
+          onBack={() => setActiveScreen('profile')} 
+          onEditCategory={(cat) => {
+            setSelectedCategory(cat);
+            setActiveScreen('editCategory');
+          }}
+        />;
+      case 'editCategory':
+        if (!selectedCategory) return null;
+        return (
+          <EditCategoryScreen
+            category={selectedCategory}
+            onCancel={() => setActiveScreen('categories')}
+            onSave={(updatedCat) => {
+              // Mock saving for now - in a real app this would update a context or backend
+              setActiveScreen('categories');
+            }}
+          />
+        );
 			case 'editProfile':
-				return <EditProfileScreen onBack={() => setActiveScreen('profile')} />;
+				return <EditProfileScreen 
+          userAvatar={userAvatar}
+          onSaveAvatar={setUserAvatar}
+          onBack={() => setActiveScreen('profile')} 
+        />;
 			case 'budget':
-				return <BudgetSettingsScreen onBack={() => setActiveScreen('profile')} />;
+				return <BudgetSettingsScreen 
+          initialBudget={totalBudget}
+          onSaveBudget={(budget) => setTotalBudget(budget)}
+          onBack={() => setActiveScreen('profile')} 
+        />;
 			case 'payment':
 				return <PaymentMethodsScreen onBack={() => setActiveScreen('profile')} />;
 

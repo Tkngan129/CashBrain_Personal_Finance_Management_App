@@ -7,13 +7,11 @@ import {
   Switch,
   Text,
   View,
+  Image,
 } from 'react-native';
 import { useColors, useTheme } from '../../context/ThemeContext';
 
-const TOTAL_BUDGET = 4_000_000;
 const TOTAL_SPENT = 719_000;
-const REMAINING = TOTAL_BUDGET - TOTAL_SPENT;
-const REMAINING_PCT = Math.round((REMAINING / TOTAL_BUDGET) * 100);
 
 const fmtVND = (v: number) => `${new Intl.NumberFormat('vi-VN').format(v)} VND`;
 
@@ -58,14 +56,17 @@ function MenuItem({ icon, iconBg, iconColor, label, subtitle, last, toggle, togg
   );
 }
 
-export function ProfileScreen({ 
-  onLogout, 
+export function ProfileScreen({
+  userAvatar,
+  totalBudget = 4000000,
+  onLogout,
   onNavigateCategories,
   onNavigateEditProfile,
   onNavigateBudget,
   onNavigatePayment
-}: { 
-  onLogout?: () => void; 
+}: {
+  userAvatar?: string | null;
+  onLogout?: () => void;
   onNavigateCategories?: () => void;
   onNavigateEditProfile?: () => void;
   onNavigateBudget?: () => void;
@@ -73,6 +74,9 @@ export function ProfileScreen({
 }) {
   const { isDark, setDark } = useTheme();
   const colors = useColors();
+
+  const remaining = totalBudget - TOTAL_SPENT;
+  const remainingPct = Math.max(0, Math.min(100, Math.round((remaining / totalBudget) * 100)));
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.bg }]} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
@@ -89,7 +93,11 @@ export function ProfileScreen({
         <View style={styles.userRow}>
           <View style={styles.avatarWrap}>
             <View style={styles.avatar}>
-              <Ionicons name="person" size={30} color="#ffffff" />
+              {userAvatar ? (
+                <Image source={{ uri: userAvatar }} style={{ width: '100%', height: '100%', borderRadius: 15 }} />
+              ) : (
+                <Ionicons name="person" size={30} color="#ffffff" />
+              )}
             </View>
             <View style={styles.onlineDot} />
           </View>
@@ -117,7 +125,7 @@ export function ProfileScreen({
         </View>
         <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
         <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: colors.text }]}>{REMAINING_PCT}%</Text>
+          <Text style={[styles.statValue, { color: colors.text }]}>{remainingPct}%</Text>
           <Text style={[styles.statLabel, { color: colors.textMuted }]}>Budget Left</Text>
         </View>
       </View>
@@ -127,17 +135,17 @@ export function ProfileScreen({
         <View style={styles.budgetHeaderRow}>
           <Text style={[styles.budgetTitle, { color: colors.text }]}>April Budget</Text>
           <View style={styles.budgetPill}>
-            <Text style={styles.budgetPillText}>{REMAINING_PCT}% left</Text>
+            <Text style={styles.budgetPillText}>{remainingPct}% left</Text>
           </View>
         </View>
-        <Text style={[styles.budgetSub, { color: colors.textSecondary }]}>{fmtVND(TOTAL_SPENT)} spent of {fmtVND(TOTAL_BUDGET)}</Text>
+        <Text style={[styles.budgetSub, { color: colors.textSecondary }]}>{fmtVND(TOTAL_SPENT)} spent of {fmtVND(totalBudget)}</Text>
         <View style={[styles.progressTrack, isDark && { backgroundColor: '#1e3a5f' }]}>
-          <View style={[styles.progressFill, { width: `${REMAINING_PCT}%` }]} />
+          <View style={[styles.progressFill, { width: `${remainingPct}%` }]} />
         </View>
         <View style={styles.budgetFooterRow}>
           <Text style={[styles.budgetSpent, { color: colors.textSecondary }]}>{fmtVND(TOTAL_SPENT)} spent</Text>
           <Text style={[styles.budgetDot, { color: colors.textMuted }]}>·</Text>
-          <Text style={styles.budgetRemaining}>{fmtVND(REMAINING)} remaining</Text>
+          <Text style={styles.budgetRemaining}>{fmtVND(remaining)} remaining</Text>
         </View>
       </View>
 
@@ -196,12 +204,11 @@ export function ProfileScreen({
       {/* Personalize */}
       <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>PERSONALIZE</Text>
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-        <MenuItem icon="notifications-outline" iconBg="#f0fdf4" iconColor="#22c55e" label="Notifications" subtitle="Alerts & reminders" colors={colors} />
         <MenuItem icon="moon-outline" iconBg="#eff6ff" iconColor="#3b82f6" label="Dark Mode" subtitle="Theme & display" toggle toggleValue={isDark} onToggle={setDark} colors={colors} />
         <MenuItem icon="globe-outline" iconBg="#fff7ed" iconColor="#f97316" label="Language" subtitle="English (US)" last colors={colors} />
       </View>
 
-      {/* Support & Legal */}
+      {/* Support & Legal */ }
       <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>SUPPORT & LEGAL</Text>
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
         <MenuItem icon="shield-outline" iconBg="#fef2f2" iconColor="#ef4444" label="Privacy & Security" subtitle="Data & permissions" colors={colors} />
@@ -209,13 +216,13 @@ export function ProfileScreen({
         <MenuItem icon="settings-outline" iconBg="#f5f3ff" iconColor="#8b5cf6" label="App Settings" subtitle="Advanced options" last colors={colors} />
       </View>
 
-      {/* Log Out */}
-      <Pressable style={styles.logoutButton} onPress={onLogout}>
-        <Ionicons name="log-out-outline" size={18} color="#ef4444" />
-        <Text style={styles.logoutText}>Log Out</Text>
-      </Pressable>
+  {/* Log Out */ }
+  <Pressable style={styles.logoutButton} onPress={onLogout}>
+    <Ionicons name="log-out-outline" size={18} color="#ef4444" />
+    <Text style={styles.logoutText}>Log Out</Text>
+  </Pressable>
 
-    </ScrollView>
+    </ScrollView >
   );
 }
 

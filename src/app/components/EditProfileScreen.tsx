@@ -8,17 +8,35 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useColors } from '../../context/ThemeContext';
 
 interface EditProfileScreenProps {
   onBack: () => void;
+  userAvatar?: string | null;
+  onSaveAvatar?: (uri: string | null) => void;
 }
 
-export function EditProfileScreen({ onBack }: EditProfileScreenProps) {
+export function EditProfileScreen({ onBack, userAvatar, onSaveAvatar }: EditProfileScreenProps) {
   const colors = useColors();
   const [activeTab, setActiveTab] = useState<'personal' | 'preferences'>('personal');
+  const [avatarUri, setAvatarUri] = useState<string | null>(userAvatar || null);
+
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+    });
+
+    if (!result.canceled) {
+      setAvatarUri(result.assets[0].uri);
+    }
+  };
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.container, { backgroundColor: colors.bg }]}>
@@ -28,7 +46,10 @@ export function EditProfileScreen({ onBack }: EditProfileScreenProps) {
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Edit Profile</Text>
-        <Pressable style={styles.saveButton}>
+        <Pressable style={styles.saveButton} onPress={() => {
+          onSaveAvatar?.(avatarUri);
+          onBack();
+        }}>
           <Text style={styles.saveButtonText}>Save</Text>
         </Pressable>
       </View>
@@ -62,9 +83,13 @@ export function EditProfileScreen({ onBack }: EditProfileScreenProps) {
             <View style={styles.avatarSection}>
               <View style={styles.avatarWrap}>
                 <View style={styles.avatar}>
-                  <Ionicons name="person" size={40} color="#ffffff" />
+                  {avatarUri ? (
+                    <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+                  ) : (
+                    <Ionicons name="person" size={40} color="#ffffff" />
+                  )}
                 </View>
-                <Pressable style={[styles.avatarEditButton, { borderColor: colors.bg }]}>
+                <Pressable style={[styles.avatarEditButton, { borderColor: colors.bg }]} onPress={pickImage}>
                   <Ionicons name="camera" size={14} color="#ffffff" />
                 </Pressable>
               </View>
@@ -231,6 +256,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#1C4D8D',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   avatarEditButton: {
     position: 'absolute',
