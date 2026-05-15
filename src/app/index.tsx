@@ -112,7 +112,7 @@ function AppInner() {
 		switch (activeScreen) {
 			case 'home':
 				return <DashboardScreen 
-          onNavigate={setActiveScreen} 
+          onNavigate={(screen) => setActiveScreen(screen as any)} 
           onAddTransaction={handleAddTransaction}
           onTransactionPress={(tx) => {
             setSelectedTransaction(tx);
@@ -222,7 +222,7 @@ function AppInner() {
         />;
 
 			case 'camera':
-				return <CameraScreen />;
+				return <CameraScreen userAvatar={userAvatar} />;
 
 			case 'transactionDetail':
 				if (!selectedTransaction) return null;
