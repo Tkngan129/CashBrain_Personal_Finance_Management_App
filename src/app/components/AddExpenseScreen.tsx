@@ -1,17 +1,18 @@
-import { categoryGroups } from '@/constants/categories';
+import { useExpenses } from '@/src/context/expenseContext';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import {
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 const styles = StyleSheet.create({
@@ -242,6 +243,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     width: '100%',
   },
+  confirmButton: {
+    backgroundColor: '#0A84FF',        // Màu xanh biển chủ đạo (iOS-like blue)
+    height: 52,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  buttonDisabled: {
+    backgroundColor: '#5A9EFF',        // Màu nhạt hơn khi disabled
+    opacity: 0.8,
+  },
+  confirmButtonText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '600',
+  }
 });
 
 interface AddExpenseScreenProps {
@@ -250,75 +268,106 @@ interface AddExpenseScreenProps {
 }
 
 type CategoryItem = {
-  id: number;
+  id: string;
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
 };
 
 const basicCategories: CategoryItem[] = [
-  { id: 1, label: 'Dining', icon: 'restaurant-outline', color: '#f59e0b' },
-  { id: 2, label: 'Shopping', icon: 'bag-handle-outline', color: '#ec4899' },
-  { id: 3, label: 'Transport', icon: 'car-outline', color: '#3b82f6' },
+  { id: '6a0d1c32c9127e9322c18cf2', label: 'Dining', icon: 'restaurant-outline', color: '#f59e0b' },
+  { id: '6a0d1c32c9127e9322c18cf4', label: 'Shopping', icon: 'bag-handle-outline', color: '#ec4899' },
+  { id: '6a0d1c32c9127e9322c18cf3', label: 'Transport', icon: 'car-outline', color: '#3b82f6' },
 ];
 
-const moreCategories: Array<{
-  groupId: number;
-  title: string;
-  color: string;
-  bgColor: string;
-  categories: CategoryItem[];
-}> = categoryGroups.map((group) => ({
-  groupId: group.id,
-  title: group.title,
-  color: group.color,
-  bgColor: group.bgColor,
-  categories: group.categories.map((item) => ({
-    id: item.id,
-    label: item.label,
-    icon: item.icon as keyof typeof Ionicons.glyphMap,
-    color: item.color,
-  })),
-}));
 
 export function AddExpenseScreen({ onClose, initialType = 'expense' }: AddExpenseScreenProps) {
   const [type, setType] = useState(initialType);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<CategoryItem['label']>(basicCategories[0].label);
+  const [selectedCategoryID, setSelectedCategoryID] = useState<CategoryItem['id']>(basicCategories[0].id);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [date, setDate] = useState('Today');
   const [showCalendar, setShowCalendar] = useState(false);
   const [showMoreCategories, setShowMoreCategories] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(dayjs().startOf('month'));
 
-  const moreCategoryItems = useMemo(
+  const {fetchExpensesCategories, expenseCategories, addExpense, addIncome, loading} = useExpenses();
+
+  useEffect(() => {
+    fetchExpensesCategories();
+  }, []);
+
+  const moreCategories = useMemo(() => {
+
+    if (!expenseCategories) return [];
+
+    return expenseCategories.map((group) => ({
+      groupId: group.id,
+      title: group.title,
+      color: group.color,
+      bgColor: group.bgColor,
+
+      categories: group.categories.map((item) => ({
+        id: item.id,
+
+        label: item.label,
+
+        icon:
+          item.icon as keyof typeof Ionicons.glyphMap,
+
+        color: item.color,
+      })),
+    }));
+  }, [expenseCategories]);
+
+    const moreCategoryItems = useMemo(
     () => moreCategories.flatMap((group) => group.categories),
-    [],
+    [moreCategories],
   );
 
+  // quick categories
   const quickCategories = useMemo(() => {
+
     const allItems = [
       ...basicCategories,
+
       ...moreCategoryItems.filter(
-        (item) => !basicCategories.some((basicItem) => basicItem.label === item.label),
+        (item) =>
+          !basicCategories.some(
+            (basicItem) =>
+              basicItem.label === item.label,
+          ),
       ),
     ];
 
     const selectedItem =
-      allItems.find((item) => item.label === selectedCategory) ?? basicCategories[0];
+      allItems.find(
+        (item) =>
+          item.label === selectedCategory,
+      ) ?? basicCategories[0];
 
-    const fallbackItems = basicCategories.filter(
-      (item) => item.label !== selectedItem.label,
-    );
+    const fallbackItems =
+      basicCategories.filter(
+        (item) =>
+          item.label !== selectedItem.label,
+      );
 
     return [selectedItem, ...fallbackItems].slice(0, 3);
+
   }, [moreCategoryItems, selectedCategory]);
 
   const selectedMoreCategory = useMemo(
-    () => moreCategoryItems.find((item) => item.label === selectedCategory),
+    () =>
+      moreCategoryItems.find(
+        (item) =>
+          item.label === selectedCategory,
+      ),
     [moreCategoryItems, selectedCategory],
   );
+
+  
 
   const formatDateLabel = (d: Date) => {
     const today = dayjs();
@@ -327,8 +376,32 @@ export function AddExpenseScreen({ onClose, initialType = 'expense' }: AddExpens
     return target.format('MMM D');
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+
     if (amount.trim() && description.trim()) {
+      const formatDate = new Date(selectedDate);
+        
+      const year = formatDate.getFullYear();
+      const month = String(formatDate.getMonth() + 1).padStart(2, '0');
+      const day = String(formatDate.getDate()).padStart(2, '0');
+      
+      const dateString = `${year}-${month}-${day}`;
+      if (type === 'expense'){
+        await addExpense({
+          amount: Number(amount),
+          category_id: String(selectedCategoryID),
+          date: dateString,
+          note: description,
+        })
+      }else{
+        await addIncome({
+          amount: Number(amount),
+          date: dateString,
+          note: description,
+        })
+      }
+      
+
       onClose?.();
     }
   };
@@ -411,7 +484,10 @@ export function AddExpenseScreen({ onClose, initialType = 'expense' }: AddExpens
                     <Pressable
                       key={item.id}
                       style={styles.quickItem}
-                      onPress={() => setSelectedCategory(item.label)}
+                      onPress={() => {
+                        setSelectedCategory(item.label);
+                        setSelectedCategoryID(item.id);
+                      }}
                     >
                       <View style={[styles.quickIconWrap, isSelected && styles.quickIconWrapActive]}>
                         <Ionicons name={item.icon as any} size={30} color={item.color} />
@@ -449,59 +525,82 @@ export function AddExpenseScreen({ onClose, initialType = 'expense' }: AddExpens
             <Modal visible={showCalendar} transparent animationType="fade">
               <View style={styles.modalOverlay}>
                 <View style={styles.calendarModal}>
+                  {/* Header điều hướng */}
                   <View style={styles.calendarHeader}>
-                    <TouchableOpacity onPress={() => setCalendarMonth((current) => current.subtract(1, 'month'))}>
+                    <TouchableOpacity onPress={() => setCalendarMonth(calendarMonth.subtract(1, 'month'))}>
                       <Ionicons name="chevron-back" size={22} color="#1C4D8D" />
                     </TouchableOpacity>
                     <Text style={styles.monthText}>{calendarMonth.format('MMMM YYYY')}</Text>
-                    <TouchableOpacity onPress={() => setCalendarMonth((current) => current.add(1, 'month'))}>
+                    <TouchableOpacity onPress={() => setCalendarMonth(calendarMonth.add(1, 'month'))}>
                       <Ionicons name="chevron-forward" size={22} color="#1C4D8D" />
                     </TouchableOpacity>
                   </View>
 
-                  <View style={styles.weekRow}>
+                  {/* Hàng tiêu đề Thứ (Sử dụng % để chính xác tuyệt đối) */}
+                  <View style={{ flexDirection: 'row', marginBottom: 10 }}>
                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((w) => (
-                      <Text key={w} style={{ width: 36, textAlign: 'center', color: '#64748b', fontWeight: '700' }}>
+                      <Text key={w} style={{ width: '14.28%', textAlign: 'center', color: '#64748b', fontWeight: '700' }}>
                         {w}
                       </Text>
                     ))}
                   </View>
 
+                  {/* Lưới ngày */}
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
                     {(() => {
-                      const startDay = calendarMonth.startOf('month').day();
+                      const firstDayOfMonth = calendarMonth.startOf('month');
+                      const startDay = firstDayOfMonth.day(); // 0 (Sun) đến 6 (Sat)
                       const daysInMonth = calendarMonth.daysInMonth();
+                      
+                      // 1. Tạo các ô trống đầu tháng
                       const blanks = Array.from({ length: startDay }).map((_, index) => (
-                        <View key={`blank-${index}`} style={{ width: 36, height: 36 }} />
+                        <View key={`blank-${index}`} style={{ width: '14.28%', height: 40 }} />
                       ));
+
+                      // 2. Tạo các ô ngày trong tháng
                       const days = Array.from({ length: daysInMonth }).map((_, index) => {
                         const dayNum = index + 1;
-                        const currentDay = calendarMonth.date(dayNum);
+                        // Quan trọng: Tạo object ngày chính xác từ ngày đầu tháng để tránh nhảy ngày
+                        const currentDay = firstDayOfMonth.date(dayNum); 
                         const isSelected = dayjs(selectedDate).isSame(currentDay, 'day');
+                        const isToday = dayjs().isSame(currentDay, 'day');
+
                         return (
                           <Pressable
                             key={dayNum}
-                            style={[styles.dayCell, isSelected && styles.dayCellSelected]}
+                            style={[
+                              { width: '14.28%', height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: 50},
+                              isSelected && styles.dayCellSelected,
+                              !isSelected && isToday && { borderBottomWidth: 2, borderBottomColor: '#1C4D8D' }
+                            ]}
                             onPress={() => {
                               const newDate = currentDay.toDate();
                               setSelectedDate(newDate);
-                              setDate(formatDateLabel(newDate));
+                              setDate(formatDateLabel(newDate)); // Đảm bảo hàm này hoạt động đúng
                               setShowCalendar(false);
                             }}
                           >
-                            <Text style={[styles.dayCellText, isSelected && { color: '#fff' }]}>{dayNum}</Text>
+                            <Text style={[
+                              { color: '#1e293b', fontSize: 14 },
+                              isSelected && { color: '#fff', fontWeight: 'bold' }
+                            ]}>
+                              {dayNum}
+                            </Text>
                           </Pressable>
                         );
                       });
+
                       return [...blanks, ...days];
                     })()}
                   </View>
 
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+                  {/* Footer Buttons */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 }}>
                     <Pressable
                       onPress={() => {
                         const today = new Date();
                         setSelectedDate(today);
+                        setCalendarMonth(dayjs(today)); // Reset lịch về tháng hiện tại
                         setDate(formatDateLabel(today));
                         setShowCalendar(false);
                       }}
@@ -518,7 +617,8 @@ export function AddExpenseScreen({ onClose, initialType = 'expense' }: AddExpens
             </Modal>
           </View>
         </View>
-
+        
+        {/*  SHOW MORE CATEGORIES SCREEN */}
         <Modal visible={showMoreCategories} transparent animationType="slide">
           <View style={styles.modalOverlay}>
             <View style={styles.categoryModal}>
@@ -532,6 +632,7 @@ export function AddExpenseScreen({ onClose, initialType = 'expense' }: AddExpens
               <ScrollView showsVerticalScrollIndicator={false}>
                 {selectedMoreCategory && (
                   <View style={{ marginBottom: 16 }}>
+                    {/*  SELECTED CATEGORY ICON */}
                     <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748b', marginBottom: 8, paddingHorizontal: 4 }}>
                       Selected
                     </Text>
@@ -571,6 +672,7 @@ export function AddExpenseScreen({ onClose, initialType = 'expense' }: AddExpens
                   </View>
                 )}
 
+                {/* MAP OF MORE CATEGORIES */}
                 <View style={styles.categoryContainer}>
                   {moreCategories.map((group) => (
                     <View key={group.groupId} style={styles.groupCard}>
@@ -599,6 +701,7 @@ export function AddExpenseScreen({ onClose, initialType = 'expense' }: AddExpens
                               style={styles.categoryItem}
                               onPress={() => {
                                 setSelectedCategory(item.label);
+                                setSelectedCategoryID(item.id);
                                 setShowMoreCategories(false);
                               }}
                             >
@@ -634,8 +737,18 @@ export function AddExpenseScreen({ onClose, initialType = 'expense' }: AddExpens
           </View>
         </Modal>
 
-        <Pressable style={styles.button} onPress={handleSubmit}>
-          <Text style={styles.buttonText}>Add {type === 'expense' ? 'Expense' : 'Income'}</Text>
+        <Pressable
+          style={[styles.confirmButton, loading && styles.buttonDisabled]}
+          onPress={handleSubmit}
+          disabled={loading}           // Ngăn click khi đang loading
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Text style={styles.confirmButtonText}>
+              Add {type === 'expense' ? 'Expense' : 'Income'}
+            </Text>
+          )}
         </Pressable>
       </View>
     </ScrollView>

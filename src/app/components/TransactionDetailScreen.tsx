@@ -1,12 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
-  Alert,
 } from 'react-native';
 import { resolveCategoryMeta } from '../../../constants/categories';
 import { useColors } from '../../context/ThemeContext';
@@ -17,8 +17,10 @@ export interface Transaction {
   date: string;
   time?: string;
   amount: number;
-  category: string;
+  category_name: string;
   note?: string;
+  type?: string;
+  category_id: string;
 }
 
 interface TransactionDetailScreenProps {
@@ -30,8 +32,11 @@ interface TransactionDetailScreenProps {
 
 export function TransactionDetailScreen({ transaction, onBack, onEdit, onDelete }: TransactionDetailScreenProps) {
   const colors = useColors();
-  const categoryMeta = resolveCategoryMeta(transaction.category);
-  const isIncome = transaction.amount > 0;
+  const categoryMeta = resolveCategoryMeta(transaction.category_name || "Income");
+  console.log("\n\n\nCATEGOGY META DATA: \n" + categoryMeta.label);
+  console.log("\n\n\nCATEGOGY NAME DATA: \n" + transaction.category_name);
+  
+  const isIncome = transaction.type === "Income" ? 1 : 0;
 
   const formatVND = (value: number) => {
     return Math.abs(value).toLocaleString('vi-VN');

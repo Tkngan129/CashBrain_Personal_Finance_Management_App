@@ -1,3 +1,5 @@
+import { useAIChatbot } from '@/src/context/aiChatbotContext';
+import { useAuth } from '@/src/context/authContext';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useRef, useState } from 'react';
 import {
@@ -20,11 +22,7 @@ type Message = {
 };
 
 const initialMessages: Message[] = [
-  { id: 1, role: 'ai', text: 'Hi Ngan! 👋 I\'m your CashBrain AI assistant. I can help you analyze your spending, suggest savings strategies, and answer any questions about your finances. How can I help you today?', time: '9:00 AM' },
-  { id: 2, role: 'user', text: 'How can I reduce my spending?', time: '9:01 AM' },
-  { id: 3, role: 'ai', text: 'Based on your transaction history, here are my top recommendations:\n\n💡 **Reduce food spending** — Try meal prepping on weekends to cut daily café visits.\n\n🛍️ **Set shopping limits** — You spent 250K on clothes this month. A weekly limit could help.\n\n🚌 **Use public transit** — Grab rides add up fast. The bus could save ~50K/month.', time: '9:01 AM' },
-  { id: 4, role: 'user', text: 'What\'s my average daily expense?', time: '9:03 AM' },
-  { id: 5, role: 'ai', text: 'Your average daily expense is **~23,967 VND** based on this month\'s data.\n\nThat\'s only 18% of your 4M budget — you\'re doing great! At this rate, you\'ll have **3,281,000 VND** left by month end. 🎉', time: '9:03 AM' },
+  { id: 1, role: 'ai', text: 'Hi! 👋 I\'m your CashBrain AI assistant. I can help you analyze your spending, suggest savings strategies, and answer any questions about your finances. How can I help you today?', time: '9:00 AM' },
 ];
 
 const quickPrompts = [
@@ -51,6 +49,10 @@ function formatText(text: string) {
 export function AIChatScreen() {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const { userProfile } = useAuth()
+  
+  // Lấy hàm fetch và trạng thái loading từ hook
+  const { fetchAIChatbotPromptPreview, loading } = useAIChatbot();
   const scrollRef = useRef<ScrollView>(null);
   const colors = useColors();
 
@@ -61,30 +63,50 @@ export function AIChatScreen() {
     return `${h % 12 || 12}:${m} ${h < 12 ? 'AM' : 'PM'}`;
   };
 
-  const sendMessage = (text: string) => {
+  // Chuyển đổi thành hàm async để đợi kết quả từ API gửi về
+  const sendMessage = async (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed || loading) return; // Không cho gửi khi trống hoặc đang đợi phản hồi cũ
+
     const userMsg: Message = { id: Date.now(), role: 'user', text: trimmed, time: now() };
     setMessages((prev) => [...prev, userMsg]);
     setMessage('');
-    setTimeout(() => {
-      const aiMsg: Message = {
+    
+    // Cuộn xuống cuối ngay sau khi user bấm gửi tin nhắn
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+
+    try {
+      // Gọi API thực tế thông qua context
+      const aiResponse = await fetchAIChatbotPromptPreview(trimmed);
+      
+      if (aiResponse) {
+        const aiMsg: Message = {
+          id: Date.now() + 1,
+          role: 'ai',
+          text: aiResponse,
+          time: now(),
+        };
+        setMessages((prev) => [...prev, aiMsg]);
+      }
+    } catch (err) {
+      // Xử lý thông báo lỗi nếu API gặp sự cố
+      const errorMsg: Message = {
         id: Date.now() + 1,
         role: 'ai',
-        text: 'Thanks for your question! I\'m analyzing your financial data... In a real app, I\'d provide personalized insights based on your actual transactions. 🧠',
+        text: '❌ Sorry, I encountered an error connecting to CashBrain servers. Please try again later.',
         time: now(),
       };
-      setMessages((prev) => [...prev, aiMsg]);
-      scrollRef.current?.scrollToEnd({ animated: true });
-    }, 800);
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+      setMessages((prev) => [...prev, errorMsg]);
+    } finally {
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+    }
   };
 
   return (
     <KeyboardAvoidingView
       style={[styles.root, { backgroundColor: colors.bg }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={0}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0} // Fix lỗi che khuất input trên một số dòng iOS
     >
       {/* Header */}
       <View style={styles.header}>
@@ -112,9 +134,8 @@ export function AIChatScreen() {
         style={styles.messageList}
         contentContainerStyle={styles.messageContent}
         showsVerticalScrollIndicator={false}
-        onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
+        onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
       >
-        {/* Date separator */}
         <View style={styles.dateSeparator}>
           <View style={styles.dateLine} />
           <Text style={styles.dateText}>Today</Text>
@@ -138,15 +159,38 @@ export function AIChatScreen() {
                   {formatText(msg.text)}
                 </Text>
                 <Text style={[styles.bubbleTime, isUser && styles.bubbleTimeUser, !isUser && { color: colors.textMuted }]}>
-                  {msg.time}
+                  {(() => {
+                    const now = new Date();
+                    const timeString = now.toLocaleTimeString('en-GB', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false
+                    });
+
+                   return timeString;
+                  })()}
                 </Text>
               </View>
             </View>
           );
         })}
 
+        {/* HIỂN THỊ TRẠNG THÁI AI ĐANG GÕ (TYPING INDICATOR) */}
+        {loading && (
+          <View style={styles.messageRow}>
+            <View style={styles.aiBubbleAvatar}>
+              <Ionicons name="sparkles" size={13} color="#ffffff" />
+            </View>
+            <View style={[styles.bubble, styles.bubbleAI, { backgroundColor: colors.card, shadowColor: 'transparent' }]}>
+              <Text style={[styles.bubbleTextAI, { color: colors.textMuted, fontStyle: 'italic' }]}>
+                CashBrain is thinking... 
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Smart Insights Card */}
-        {messages.length <= 1 && (
+        {messages.length <= 1 && !loading && (
           <View style={[styles.insightsCard, { backgroundColor: colors.card }]}>
             <View style={styles.insightsHeaderRow}>
               <View style={styles.insightsBadge}>
@@ -158,7 +202,7 @@ export function AIChatScreen() {
               <View style={[styles.insightDot, { backgroundColor: '#16a34a' }]} />
               <View style={styles.insightTextWrap}>
                 <Text style={[styles.insightTitle, { color: colors.text }]}>On Track! 🎯</Text>
-                <Text style={[styles.insightDesc, { color: colors.textSecondary }]}>You've only used 18% of your April budget.</Text>
+                <Text style={[styles.insightDesc, { color: colors.textSecondary }]}>You&apos;ve only used 18% of your April budget.</Text>
               </View>
             </View>
             <View style={styles.insightItem}>
@@ -187,7 +231,12 @@ export function AIChatScreen() {
         contentContainerStyle={styles.quickPromptsContent}
       >
         {quickPrompts.map((p, i) => (
-          <Pressable key={i} style={[styles.quickPromptPill, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => sendMessage(p.text)}>
+          <Pressable 
+            key={i} 
+            disabled={loading} // Khóa nút khi đang load bài viết cũ
+            style={[styles.quickPromptPill, { backgroundColor: colors.card, borderColor: colors.border }, loading && { opacity: 0.5 }]} 
+            onPress={() => sendMessage(p.text)}
+          >
             <Text style={[styles.quickPromptText, { color: colors.text }]}>{p.label}</Text>
           </Pressable>
         ))}
@@ -201,20 +250,22 @@ export function AIChatScreen() {
           </Pressable>
           <TextInput
             style={[styles.input, { color: colors.text }]}
-            placeholder="Ask me anything..."
+            placeholder={loading ? "Waiting for response..." : "Ask me anything..."}
             placeholderTextColor={colors.textMuted}
             value={message}
             onChangeText={setMessage}
             multiline
             maxLength={500}
+            editable={!loading} // Khóa input khi AI đang xử lý request
             returnKeyType="send"
             onSubmitEditing={() => sendMessage(message)}
           />
           <Pressable
-            style={[styles.sendButton, message.trim() ? styles.sendButtonActive : styles.sendButtonInactive]}
+            style={[styles.sendButton, (message.trim() && !loading) ? styles.sendButtonActive : styles.sendButtonInactive]}
             onPress={() => sendMessage(message)}
+            disabled={!message.trim() || loading}
           >
-            <Ionicons name="arrow-up" size={18} color={message.trim() ? '#ffffff' : '#94a3b8'} />
+            <Ionicons name="arrow-up" size={18} color={(message.trim() && !loading) ? '#ffffff' : '#94a3b8'} />
           </Pressable>
         </View>
         <Text style={styles.inputHint}>CashBrain AI · Personalized to your finances</Text>

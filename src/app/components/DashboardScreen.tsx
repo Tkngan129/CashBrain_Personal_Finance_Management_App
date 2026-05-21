@@ -1,37 +1,17 @@
-import { resolveCategoryMeta } from '@/constants/categories';
+import { useAnalysis } from '@/src/context/analysisContext';
+import { useAuth } from '@/src/context/authContext';
+import { useExpenses } from '@/src/context/expenseContext';
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
-    Dimensions,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
-import { useColors } from '../../context/ThemeContext';
-import { useTransactions } from '../../context/TransactionContext';
-
-const { width } = Dimensions.get('window');
-const scale = width / 375;
-
-const TOTAL_BUDGET = 4_000_000;
-const TOTAL_SPENT = 719_000;
-const REMAINING = TOTAL_BUDGET - TOTAL_SPENT;
-const REMAINING_PCT = Math.round((REMAINING / TOTAL_BUDGET) * 100);
 
 
-const weekData = [
-  { day: 'Mon', amount: 24_000, active: false },
-  { day: 'Tue', amount: 8_000, active: false },
-  { day: 'Wed', amount: 58_000, active: false },
-  { day: 'Thu', amount: 18_000, active: false },
-  { day: 'Fri', amount: 80_000, active: true },
-  { day: 'Sat', amount: 12_000, active: false },
-  { day: 'Sun', amount: 9_000, active: false },
-];
-
-fontSize: 28 * scale
 
 interface DashboardScreenProps {
   onNavigate?: (screen: string) => void;
@@ -39,21 +19,70 @@ interface DashboardScreenProps {
   onTransactionPress?: (transaction: any) => void;
 }
 
-const formatVND = (value: number) => `${new Intl.NumberFormat('vi-VN').format(Math.abs(value))} VND`;
+const formatVND = (value: number) => {
+  return value < 0 ?  `-${new Intl.NumberFormat('vi-VN').format(Math.abs(value))} VND` : `${new Intl.NumberFormat('vi-VN').format(Math.abs(value))} VND`
+};
 
 export function DashboardScreen({ onNavigate, onAddTransaction, onTransactionPress }: DashboardScreenProps) {
-  const colors = useColors();
-  const { transactions } = useTransactions();
-  const recentTransactions = transactions.slice(0, 6);
+  const { fetchExpenses, fetchIncomes, transactions } = useExpenses();
+  const { weeklyAnalysis, fetchWeeklyAnalysis, monthlyAnalysis, fetchMonthlyAnalysis } = useAnalysis();
+  const { userProfile, fetchUserProfile} = useAuth();
+
+  const USER_PROFILE = useMemo(() => {
+    return userProfile
+  }, [userProfile]);
+
+  const MAX_WEEK_SPENDING = useMemo(() => {
+      if (!weeklyAnalysis || weeklyAnalysis.length === 0) {
+          return 0;
+      }
+      
+      return Math.max(...weeklyAnalysis.map(item => Math.abs(item.amount) || 0));
+  }, [weeklyAnalysis]);
+
+  const TOTAL_BUDGET = useMemo(() => monthlyAnalysis?.total_income || 0, [monthlyAnalysis]);   // static thì dependency rỗng
+
+  const TOTAL_SPENT = useMemo(() => {
+      return monthlyAnalysis?.total_expense || 0;
+  }, [monthlyAnalysis]); 
+
+  const REMAINING = useMemo(() => {
+      return TOTAL_BUDGET - TOTAL_SPENT <= 0 ? 0 : TOTAL_BUDGET - Math.abs(TOTAL_SPENT);
+  }, [TOTAL_BUDGET, TOTAL_SPENT]);
+
+  const REMAINING_PCT = useMemo(() => {
+      if (TOTAL_BUDGET === 0) return 0;
+      return Math.round((REMAINING / TOTAL_BUDGET) * 100) <= 0 ? 0 : Math.round((REMAINING / TOTAL_BUDGET) * 100);
+  }, [REMAINING, TOTAL_BUDGET]);
+
+  useEffect( () => {
+    fetchExpenses();
+    fetchWeeklyAnalysis();
+    fetchMonthlyAnalysis();
+    fetchIncomes();
+    fetchUserProfile();
+  }, []);
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.bg }]} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <View style={[styles.header, { backgroundColor: colors.bg }]}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={styles.header}>
         <View>
-          <Text style={[styles.greeting, { color: colors.textMuted }]}>Good morning 👋</Text>
-          <Text style={[styles.name, { color: colors.text }]}>Ngan Tran</Text>
+          <Text style={styles.greeting}>{(() => {
+            const currentHour = new Date().getHours();
+
+            if (currentHour < 12) {
+              return "Good morning";
+            }
+
+            if (currentHour < 18) {
+              return "Good afternoon";
+            }
+
+            return "Good evening";
+          })()}</Text>
+          <Text style={styles.name}>{USER_PROFILE?.username || "Unknown user"}</Text>
         </View>
-        <Pressable style={[styles.notificationButton, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => onNavigate?.('transactions')}>
-          <Ionicons name="notifications-outline" size={20} color={colors.textSecondary} />
+        <Pressable style={styles.notificationButton} onPress={() => onNavigate?.('transactions')} disabled={true}>
+          <Ionicons name="notifications-outline" size={20} color="#64748b" />
         </Pressable>
       </View>
 
@@ -64,11 +93,7 @@ export function DashboardScreen({ onNavigate, onAddTransaction, onTransactionPre
         <View style={styles.balanceTopRow}>
           <View style={styles.balanceTextBlock}>
             <Text style={styles.balanceLabel}>Total Balance</Text>
-            <Text style={styles.balanceAmount}>{formatVND(REMAINING)}</Text>
-            <View style={styles.trendRow}>
-              <Ionicons name="trending-up-outline" size={16} color="#a9d5ff" />
-              <Text style={styles.trendText}>+8.2% this month</Text>
-            </View>
+            <Text style={styles.balanceAmount}>{formatVND(monthlyAnalysis?.balance || 0)}</Text>
           </View>
           <View style={styles.walletBadge}>
             <Ionicons name="wallet-outline" size={21} color="#ffffff" />
@@ -110,60 +135,62 @@ export function DashboardScreen({ onNavigate, onAddTransaction, onTransactionPre
         </Pressable>
       </View>
 
-      <View style={[styles.card, { backgroundColor: colors.card }]}>
+      <View style={styles.card}>
         <View style={styles.cardHeaderRow}>
           <View>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>April Budget</Text>
-            <Text style={[styles.sectionSubtitle, { color: colors.textMuted }]}>{formatVND(TOTAL_BUDGET)} total</Text>
+            <Text style={styles.sectionTitle}>
+              {(() => {
+                const month = new Date().toLocaleString('default', { month: 'long' });
+                return month; // Output: "May"
+              })()}Budget</Text>
+            <Text style={styles.sectionSubtitle}>{formatVND(TOTAL_BUDGET)} total</Text>
           </View>
-          <View style={[styles.pill, { backgroundColor: colors.pill }]}>
-            <Text style={[styles.pillText, { color: colors.pillText }]}>{REMAINING_PCT}% left</Text>
+          <View style={styles.pill}>
+            <Text style={styles.pillText}>{REMAINING_PCT}% left</Text>
           </View>
         </View>
-        <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
+        <View style={styles.progressTrack}>
           <View style={[styles.progressFill, { width: `${REMAINING_PCT}%` }]} />
         </View>
-        <View style={styles.budgetSummaryRow}>
-          <View style={styles.summaryBlockLeft}>
-            <Text style={[styles.budgetSpent, { color: colors.textSecondary }]}>
-              {formatVND(TOTAL_SPENT)} spent
+                <View style={styles.budgetSummaryRow}>
+        <View style={styles.summaryBlockLeft}>
+            <Text style={styles.budgetSpent}>
+            {formatVND(TOTAL_SPENT)} spent
             </Text>
-          </View>
-          <Text style={[styles.budgetDot, { color: colors.textMuted }]}>•</Text>
-          <View style={styles.summaryBlockRight}>
-            <Text style={styles.budgetRemaining}>
-              {formatVND(REMAINING)} remaining
-            </Text>
-          </View>
         </View>
+
+        <Text style={styles.budgetDot}>•</Text>
+
+        <View style={styles.summaryBlockRight}>
+            <Text style={styles.budgetRemaining}>
+            {formatVND(REMAINING)} remaining
+            </Text>
+        </View>
+    </View>
       </View>
 
-      <View style={[styles.card, { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.chartCardBorder }]}>
+      {/* WEEKLY CHART */}
+      <View style={styles.card}>
         <View style={styles.cardHeaderRow}>
           <View>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>This Week</Text>
-            <Text style={[styles.sectionSubtitle, { color: colors.textMuted }]}>Daily spending overview</Text>
+            <Text style={styles.sectionTitle}>This Week</Text>
+            <Text style={styles.sectionSubtitle}>Daily spending overview</Text>
           </View>
           <Pressable style={styles.linkRow} onPress={() => onNavigate?.('analytics')}>
             <Text style={styles.linkText}>Full report</Text>
             <Ionicons name="chevron-forward" size={16} color="#1C4D8D" />
           </Pressable>
         </View>
-        <View style={[styles.chartRow, { backgroundColor: colors.barTrackBg, borderRadius: 12, padding: 4, marginTop: 4 }]}>
-          {weekData.map((item) => {
-            const barHeight = Math.max(14, Math.round((item.amount / 80_000) * 102));
+
+        <View style={styles.chartRow}>
+          {weeklyAnalysis.map((item) => {
+            const barHeight = Math.max(14, Math.round((Math.abs(item.amount) / MAX_WEEK_SPENDING) * 102));
             return (
               <View key={item.day} style={styles.chartColumn}>
-                <View style={[styles.barTrack, { backgroundColor: 'transparent' }]}>
-                  <View
-                    style={[
-                      styles.bar,
-                      { backgroundColor: item.active ? colors.barFillActive : colors.barFillInactive },
-                      { height: barHeight },
-                    ]}
-                  />
+                <View style={styles.barTrack}>
+                  <View style={[styles.bar, item.active && styles.barActive, { height: barHeight }]} />
                 </View>
-                <Text style={[styles.chartDay, { color: colors.chartLabelText }]}>{item.day}</Text>
+                <Text style={styles.chartDay}>{item.day}</Text>
               </View>
             );
           })}
@@ -176,41 +203,41 @@ export function DashboardScreen({ onNavigate, onAddTransaction, onTransactionPre
         </View>
         <View style={styles.insightTextWrap}>
           <Text style={styles.insightTitle}>AI Smart Insight</Text>
-          <Text style={styles.insightBody}>You&apos;re 82% under budget - ask me for a plan!</Text>
+          <Text style={styles.insightBody}>You&apos;re {REMAINING_PCT}% under budget - ask me for a plan!</Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
       </Pressable>
 
       <View>
         <View style={styles.recentHeaderRow}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Transactions</Text>
+          <Text style={styles.sectionTitle}>Recent Transactions</Text>
           <Pressable onPress={() => onNavigate?.('analytics')}>
             <Text style={styles.linkText}>View all</Text>
           </Pressable>
         </View>
 
-        <View style={[styles.card, { backgroundColor: colors.card }]}>
-          {recentTransactions.map((tx, index) => {
-            const categoryMeta = resolveCategoryMeta(tx.category);
+        {/* RECENT TRANSACTION (TAKE ONLY FIRST 5 OBJECTS) */}
+        <View style={styles.card}>
+          {transactions.slice(0, 8).map((tx, index) => {
+            // const categoryMeta = resolveCategoryMeta(tx.category);
             return (
             <Pressable
-              key={tx.id}
+              key={index}
               onPress={() => onTransactionPress?.(tx)}
               style={[
                 styles.transactionItem,
-                { borderBottomColor: colors.border },
-                index === recentTransactions.length - 1 && styles.transactionItemLast,
+                index === 5 - 1 && styles.transactionItemLast,
               ]}
             >
-              <View style={[styles.transactionIcon, { backgroundColor: categoryMeta.bgColor }]}>
-                <Ionicons name={categoryMeta.icon as any} size={21} color={categoryMeta.color} />
+              <View style={[styles.transactionIcon, { backgroundColor: tx?.category_bg_color || '#ecfdf5' }]}> 
+                <Ionicons name={tx?.type === 'Expense' ? tx?.category_icon : 'wallet-outline' as any} size={21} color={tx?.category_color || '#22c55e'} />
               </View>
               <View style={styles.transactionInfo}>
-                <Text style={[styles.transactionTitle, { color: colors.text }]}>{tx.title}</Text>
-                <Text style={[styles.transactionCategory, { color: colors.textMuted }]}>{categoryMeta.label} · {tx.date} · {tx.time}</Text>
+                <Text style={styles.transactionTitle}>{tx?.note}</Text>
+                <Text style={styles.transactionCategory}>{tx?.category_name} · {tx?.date} </Text>
               </View>
-              <Text style={[styles.transactionAmount, { color: tx.amount > 0 ? '#1ca34a' : '#ef4444' }]}>
-                {tx.amount > 0 ? '+' : '-'}{formatVND(tx.amount)}
+              <Text style={[styles.transactionAmount, { color: tx?.type !== "Expense" ? '#1ca34a' : '#ef4444' }]}> 
+                {tx?.type !== "Expense" ? '+' : '-'}{formatVND(tx?.amount)}
               </Text>
             </Pressable>
             );
@@ -307,7 +334,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   balanceAmount: {
-  fontSize: 31,
+  fontSize: 24,
   lineHeight: 36,
   fontWeight: '900',
   color: '#ffffff',

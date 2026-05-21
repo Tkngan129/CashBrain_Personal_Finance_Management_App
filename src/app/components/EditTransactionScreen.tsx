@@ -1,20 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import { useExpenses } from '@/src/context/expenseContext';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   Pressable,
   ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  Modal,
+  View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import { resolveCategoryMeta } from '../../../constants/categories';
 import { useColors } from '../../context/ThemeContext';
 import { Transaction } from './TransactionDetailScreen';
-import { resolveCategoryMeta, categoryGroups } from '../../../constants/categories';
 
 interface EditTransactionScreenProps {
   transaction: Transaction;
@@ -29,13 +30,20 @@ export function EditTransactionScreen({ transaction, onCancel, onSave }: EditTra
   const [amount, setAmount] = useState(Math.abs(transaction.amount).toString());
   const [date, setDate] = useState(transaction.date);
   const [time, setTime] = useState(transaction.time || '');
-  const [category, setCategory] = useState(transaction.category);
-  const [type, setType] = useState<'expense' | 'income'>(transaction.amount >= 0 ? 'income' : 'expense');
+  const [category, setCategory] = useState(transaction.category_name);
+  const [type, setType] = useState<'expense' | 'income'>(transaction.type === "Income" ? 'income' : 'expense');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   
   const [pickerDate, setPickerDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [selectedCategoryID, setSelectedCategoryID] = useState<string>("");
+
+  const { expenseCategories, fetchExpensesCategories } = useExpenses();
+
+  useEffect( () => {
+    fetchExpensesCategories();
+  }, []);
 
   const handleDateConfirm = (selectedDate: Date) => {
     setShowDatePicker(false);
@@ -59,15 +67,21 @@ export function EditTransactionScreen({ transaction, onCancel, onSave }: EditTra
 
   const handleSave = () => {
     const numAmount = parseFloat(amount.replace(/[^0-9.]/g, '')) || 0;
-    const finalAmount = type === 'expense' ? -numAmount : numAmount;
-    
+
+    const finalAmount =
+      type === 'expense' ? -numAmount : numAmount;
+
     onSave({
       ...transaction,
       title,
       amount: finalAmount,
       date,
       time,
-      category,
+      category_name: category,
+      category_id:
+        transaction.type !== "Income"
+          ? selectedCategoryID
+          : "null",
     });
   };
 
@@ -225,7 +239,7 @@ export function EditTransactionScreen({ transaction, onCancel, onSave }: EditTra
             </View>
             <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
               {type === 'expense' ? (
-                categoryGroups.map((group) => (
+                expenseCategories.map((group) => (
                   <View key={group.id} style={styles.modalGroup}>
                     <Text style={[styles.modalGroupTitle, { color: colors.textMuted }]}>{group.title}</Text>
                     {group.categories.map((cat) => (
@@ -235,6 +249,7 @@ export function EditTransactionScreen({ transaction, onCancel, onSave }: EditTra
                         onPress={() => {
                           setCategory(cat.label);
                           setShowCategoryModal(false);
+                          setSelectedCategoryID(cat.id)
                         }}
                       >
                         <View style={[styles.modalCategoryIcon, { backgroundColor: group.bgColor }]}>
@@ -252,32 +267,6 @@ export function EditTransactionScreen({ transaction, onCancel, onSave }: EditTra
                   <Pressable 
                     style={styles.modalCategoryItem}
                     onPress={() => {
-                      setCategory('Salary');
-                      setShowCategoryModal(false);
-                    }}
-                  >
-                    <View style={[styles.modalCategoryIcon, { backgroundColor: '#ecfdf5' }]}>
-                      <Ionicons name="wallet-outline" size={20} color="#22c55e" />
-                    </View>
-                    <Text style={[styles.modalCategoryText, { color: colors.text }]}>Salary</Text>
-                    {category === 'Salary' && <Ionicons name="checkmark" size={20} color="#1C4D8D" />}
-                  </Pressable>
-                  <Pressable 
-                    style={styles.modalCategoryItem}
-                    onPress={() => {
-                      setCategory('Freelance');
-                      setShowCategoryModal(false);
-                    }}
-                  >
-                    <View style={[styles.modalCategoryIcon, { backgroundColor: '#eff6ff' }]}>
-                      <Ionicons name="business-outline" size={20} color="#3b82f6" />
-                    </View>
-                    <Text style={[styles.modalCategoryText, { color: colors.text }]}>Freelance</Text>
-                    {category === 'Freelance' && <Ionicons name="checkmark" size={20} color="#1C4D8D" />}
-                  </Pressable>
-                  <Pressable 
-                    style={styles.modalCategoryItem}
-                    onPress={() => {
                       setCategory('Income');
                       setShowCategoryModal(false);
                     }}
@@ -285,7 +274,7 @@ export function EditTransactionScreen({ transaction, onCancel, onSave }: EditTra
                     <View style={[styles.modalCategoryIcon, { backgroundColor: '#f0fdfa' }]}>
                       <Ionicons name="cash-outline" size={20} color="#0d9488" />
                     </View>
-                    <Text style={[styles.modalCategoryText, { color: colors.text }]}>Other Income</Text>
+                    <Text style={[styles.modalCategoryText, { color: colors.text }]}>Main Income</Text>
                     {category === 'Income' && <Ionicons name="checkmark" size={20} color="#1C4D8D" />}
                   </Pressable>
                 </View>

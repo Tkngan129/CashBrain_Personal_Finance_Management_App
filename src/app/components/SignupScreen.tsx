@@ -1,28 +1,42 @@
-import React, { useState } from 'react';
+import { useAuth } from '@/src/context/authContext';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  StyleSheet,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useColors } from '../../context/ThemeContext';
 
 interface SignupScreenProps {
-  onSignup: () => void;
+  onSignup: (result: boolean) => void;
   onNavigateLogin: () => void;
 }
 
 export function SignupScreen({ onSignup, onNavigateLogin }: SignupScreenProps) {
   const colors = useColors();
-  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  const { fetchUserRegister, accessToken, refreshToken } = useAuth();
+  
+    const registerPress = async () => {
+      await fetchUserRegister(username, email, password);
+    }
+  
+    useEffect(() => {
+  
+      if (accessToken!=="" && refreshToken!==""){
+        onSignup(accessToken!=="" && refreshToken!=="");
+      }
+    }, [accessToken, refreshToken]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
@@ -43,15 +57,15 @@ export function SignupScreen({ onSignup, onNavigateLogin }: SignupScreenProps) {
 
           <View style={styles.form}>
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Full Name</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Username</Text>
               <View style={[styles.inputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
                 <Ionicons name="person-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
                 <TextInput
                   style={[styles.input, { color: colors.text }]}
-                  placeholder="Enter your name"
+                  placeholder="Enter your username"
                   placeholderTextColor={colors.textMuted}
-                  value={name}
-                  onChangeText={setName}
+                  value={username}
+                  onChangeText={setUsername}
                   autoCapitalize="words"
                 />
               </View>
@@ -91,7 +105,7 @@ export function SignupScreen({ onSignup, onNavigateLogin }: SignupScreenProps) {
               </View>
             </View>
 
-            <Pressable style={styles.signupButton} onPress={onSignup}>
+            <Pressable style={styles.signupButton} onPress={registerPress}>
               <Text style={styles.signupButtonText}>Sign Up</Text>
             </Pressable>
 

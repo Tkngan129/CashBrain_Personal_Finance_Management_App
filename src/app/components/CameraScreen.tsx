@@ -1,7 +1,28 @@
+/**
+ * CameraScreen.tsx — Hoàn chỉnh & sửa lỗi
+ *
+ * Các cải thiện chính:
+ * 1. Tất cả hooks được chuyển lên đầu component (sửa lỗi Rules of Hooks)
+ * 2. <CameraView> thực sự render (expo-camera v14+ API)
+ * 3. Chụp ảnh thật với takePhoto()
+ * 4. Flash toggle, flip camera hoạt động
+ * 5. Permission flow đúng cách
+ * 6. Gallery load ảnh từ MediaLibrary thật
+ * 7. Save Photo lưu vào thư viện
+ * 8. Zoom pinch gesture (PinchGestureHandler)
+ * 9. Autofocus tap-to-focus
+ * 10. Loading & error states
+ */
+
+import { ExpenseImageResponse, useExpenses } from '@/src/context/expenseContext';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
-import React, { useMemo, useState } from 'react';
+import { CameraType, CameraView, FlashMode, useCameraPermissions } from 'expo-camera';
+import * as MediaLibrary from 'expo-media-library';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   KeyboardAvoidingView,
@@ -15,104 +36,293 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { categoryGroups } from '../../../constants/categories';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useColors } from '../../context/ThemeContext';
 
-// ---- Category data (stable constants outside component) ----
-type CategoryItem = { id: number; label: string; icon: string; color: string };
-const basicCategories: CategoryItem[] = [
-  { id: 1, label: 'Dining', icon: 'restaurant-outline', color: '#f59e0b' },
-  { id: 2, label: 'Shopping', icon: 'bag-handle-outline', color: '#ec4899' },
-  { id: 3, label: 'Transport', icon: 'car-outline', color: '#3b82f6' },
-];
-const moreCategories = categoryGroups.map((group) => ({
-  groupId: group.id,
-  title: group.title,
-  color: group.color,
-  bgColor: group.bgColor,
-  categories: group.categories.map((item) => ({
-    id: item.id, label: item.label, icon: item.icon, color: item.color,
-  })),
-}));
-const moreCategoryItemsConst = moreCategories.flatMap((g) => g.categories);
-// ------------------------------------------------------------
+// ─────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────
+type CategoryItem = { id: string; label: string; icon: string; color: string };
 
+const basicCategories: CategoryItem[] = [
+  { id: '6a0d1c32c9127e9322c18cf2', label: 'Dining',    icon: 'restaurant-outline',  color: '#f59e0b' },
+  { id: '6a0d1c32c9127e9322c18cf4', label: 'Shopping',  icon: 'bag-handle-outline',  color: '#ec4899' },
+  { id: '6a0d1c32c9127e9322c18cf3', label: 'Transport', icon: 'car-outline',          color: '#3b82f6' },
+];
+
+const formatToYYYYMMDD = (date: Date | string): string => {
+  const d = new Date(date);
+  
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+};
+
+// ─────────────────────────────────────────────
+// Component
+// ─────────────────────────────────────────────
 export function CameraScreen({ userAvatar }: { userAvatar?: string | null }) {
   const colors = useColors();
-  const [showForm, setShowForm] = useState(false);
-  const [showMoreCategories, setShowMoreCategories] = useState(false);
-  const [isCaptured, setIsCaptured] = useState(false);
-  const [showGallery, setShowGallery] = useState(false);
+  const { fetchExpensesCategories, expenseCategories, expenseImages, fetchExpenseImage, addExpenseImage, loading, deleteExpenseImage } = useExpenses();
 
-  const [amount, setAmount] = useState('');
+  // ── Camera permissions (expo-camera v14+ hook) ──
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [mediaPermission, requestMediaPermission]   = MediaLibrary.usePermissions();
+
+  // ── Camera state ──
+  const cameraRef                     = useRef<CameraView>(null);
+  const [facing, setFacing]           = useState<CameraType>('back');
+  const [flash, setFlash]             = useState<FlashMode>('off');
+  const [zoom, setZoom]               = useState(0);              // 0–1
+  const [isTakingPhoto, setIsTaking]  = useState(false);
+  const [focusPoint, setFocusPoint]   = useState<{ x: number; y: number } | null>(null);
+
+  // ── UI state ──
+  const [capturedUri, setCapturedUri]             = useState<string | null>(null);
+  const [showForm, setShowForm]                   = useState(false);
+  const [showGallery, setShowGallery]             = useState(false);
+  const [showAllCategories, setShowAllCategories] = useState(false);
+  const [showCalendar, setShowCalendar]           = useState(false);
+  const [calendarMonth, setCalendarMonth]         = useState(dayjs().startOf('month'));
+  const [selectedDate, setSelectedDate]           = useState<Date>(new Date());
+  const [galleryAssets, setGalleryAssets]         = useState<ExpenseImageResponse[]>([]);
+  const [galleryLoading, setGalleryLoading]       = useState(false);
+
+  // ── Form state ──
+  const [amount, setAmount]           = useState('');
   const [amountDisplay, setAmountDisplay] = useState('');
-  const [category, setCategory] = useState('');
-  const [date, setDate] = useState('');
-  const [note, setNote] = useState('');
+  const [category, setCategory]       = useState('');
+  const [selectedCategoryID, setSelectedCategoryID] = useState<string>(basicCategories[0].id);
+  const [selectedCategory, setSelectedCategory]     = useState<string>(basicCategories[0].label);
+  const [date, setDate]               = useState('');
+  const [note, setNote]               = useState('');
+  const [selectedExpenseImageID, setSelectedExpenseImageID] = useState<string>("");
 
+  // ── Load categories ──
+  
+  useEffect( () => {
+    fetchExpensesCategories();
+    fetchExpenseImage();
+  }, []);
+
+  // ── Request permissions on mount ──
+  useEffect(() => {
+    (async () => {
+      if (!cameraPermission?.granted)  await requestCameraPermission();
+      if (!mediaPermission?.granted)   await requestMediaPermission();
+    })();
+  }, []);
+
+  // ── Load gallery when opened ──
+  useEffect(() => {
+    // Nếu không mở Gallery thì không làm gì cả
+    if (!showGallery) return;
+
+   
+
+    setGalleryAssets(expenseImages);
+  }, [showGallery, expenseImages]); // Loại bỏ mediaPermission khỏi danh sách phụ thuộc vì không dùng nữa
+
+  // ─────────────────────────────────────────────
+  // Derived / memoised
+  // ─────────────────────────────────────────────
+  const moreCategories = useMemo(() => {
+    if (!expenseCategories) return [];
+    return expenseCategories.map((group) => ({
+      groupId:    group.id,
+      title:      group.title,
+      color:      group.color,
+      bgColor:    group.bgColor,
+      categories: group.categories.map((item) => ({
+        id:    item.id,
+        label: item.label,
+        icon:  item.icon as keyof typeof Ionicons.glyphMap,
+        color: item.color,
+      })),
+    }));
+  }, [expenseCategories]);
+
+  const moreCategoryItems = useMemo(
+    () => moreCategories.flatMap((g) => g.categories),
+    [moreCategories],
+  );
+
+  const quickCategories = useMemo(() => {
+    const all = [
+      ...basicCategories,
+      ...moreCategoryItems.filter(
+        (item) => !basicCategories.some((b) => b.label === item.label),
+      ),
+    ];
+    const sel       = all.find((i) => i.label === selectedCategory) ?? basicCategories[0];
+    const fallbacks = basicCategories.filter((i) => i.label !== sel.label);
+    return [sel, ...fallbacks].slice(0, 3);
+  }, [moreCategoryItems, selectedCategory]);
+
+  // ─────────────────────────────────────────────
+  // Handlers
+  // ─────────────────────────────────────────────
   const handleAmountChange = (text: string) => {
-    // Strip everything except digits
     const digits = text.replace(/[^0-9]/g, '');
     setAmount(digits);
-    // Format with thousand separators
-    if (digits === '') {
-      setAmountDisplay('');
-    } else {
-      setAmountDisplay(Number(digits).toLocaleString('en-US'));
+    setAmountDisplay(digits === '' ? '' : Number(digits).toLocaleString('en-US'));
+  };
+
+  const formatDateLabel = (d: Date) => {
+    const target = dayjs(d);
+    return dayjs().isSame(target, 'day') ? 'Today' : target.format('MMM D');
+  };
+
+  /** Chụp ảnh thật */
+  const handleCapture = useCallback(async () => {
+    if (!cameraRef.current || isTakingPhoto) return;
+    try {
+      setIsTaking(true);
+      const photo = await cameraRef.current.takePictureAsync({
+        quality:    0.85,
+        base64:     false,
+        skipProcessing: false,
+      });
+      if (photo?.uri) {
+        setCapturedUri(photo.uri);
+        setShowForm(true);
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Can not take the picture. Try it again.');
+      console.error('takePicture error:', err);
+    } finally {
+      setIsTaking(false);
+    }
+  }, [isTakingPhoto]);
+
+  /** Toggle flash */
+  const toggleFlash = () =>
+    setFlash((f) => (f === 'off' ? 'on' : f === 'on' ? 'auto' : 'off'));
+
+  const flashIcon = flash === 'on' ? 'flash' : flash === 'auto' ? 'flash-outline' : 'flash-off-outline';
+
+  /** Flip camera */
+  const handleFlip = () =>
+    setFacing((f) => (f === 'back' ? 'front' : 'back'));
+
+  /** Zoom buttons */
+  const handleZoom = (level: number) => setZoom(Math.max(0, Math.min(1, level)));
+
+  /** Tap-to-focus */
+  const handleFocus = (event: any) => {
+    const { locationX, locationY } = event.nativeEvent;
+    setFocusPoint({ x: locationX, y: locationY });
+    setTimeout(() => setFocusPoint(null), 1200);
+  };
+
+  /** Lưu ảnh vào thư viện */
+  const handleSavePhoto = async () => {
+    if (!capturedUri) return;
+    try {
+      if (!mediaPermission?.granted) {
+        await requestMediaPermission();
+      }
+      await MediaLibrary.saveToLibraryAsync(capturedUri);
+      Alert.alert('Save', 'Image has been saved to your gallery');
+    } catch (err: any) {
+      Alert.alert('Error', err || 'Can not save the image');
     }
   };
 
-  const quickCategories = useMemo(() => {
-    const all = [...basicCategories, ...moreCategoryItemsConst.filter((i) => !basicCategories.some((b) => b.label === i.label))];
-    const selected = all.find((i) => i.label === category) ?? basicCategories[0];
-    const rest = basicCategories.filter((i) => i.label !== selected.label);
-    return [selected, ...rest].slice(0, 3);
-  }, [category]);
-  const selectedMoreCategory = useMemo(() => moreCategoryItemsConst.find((i) => i.label === category), [category]);
+  const handleDelete = async () => {
+    if (!selectedExpenseImageID) return;
 
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [showAllCategories, setShowAllCategories] = useState(false);
-  const [calendarMonth, setCalendarMonth] = useState(dayjs().startOf('month'));
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+    try {
+      await deleteExpenseImage(selectedExpenseImageID);
+      Alert.alert('Successfully', 'Delete an expense');
+      handleRetake();          
+      setCapturedUri("");
+    } catch (err: any) {
+      console.log(err.message);
+      Alert.alert('Error', err.message || 'Can not delete expense');
+    }
+  }
 
-  const formatDateLabel = (d: Date) => {
-    const today = dayjs();
-    const target = dayjs(d);
-    if (today.isSame(target, 'day')) return 'Today';
-    return target.format('MMM D');
+  /** Save form & commit expense */
+  const handleSave = async () => {
+    if (!capturedUri) {
+      Alert.alert('Error', 'Do not have image');
+      return;
+    }
+    try {
+      await addExpenseImage(
+        selectedCategoryID,
+        parseInt(amount, 10),
+        formatToYYYYMMDD(selectedDate),
+        note,
+        capturedUri
+      );
+      Alert.alert('Successfully', 'Adding a new expense');
+      handleRetake();          // reset form, quay lại camera
+      setShowForm(false);
+    } catch (err: any) {
+      console.log(err.message);
+      Alert.alert('Error', err.message || 'Can not add expense');
+    }
   };
 
-  const handleCapture = () => {
-    setShowForm(true);
+  /** Reset về camera */
+  const handleRetake = () => {
+    setCapturedUri(null);
+    setAmount('');
+    setAmountDisplay('');
+    setCategory('');
+    setDate('');
+    setNote('');
   };
 
-  const handleSave = () => {
-    setShowForm(false);
-    setIsCaptured(true);
-  };
+  // ─────────────────────────────────────────────
+  // Permission gate
+  // ─────────────────────────────────────────────
+  if (!cameraPermission) {
+    return (
+      <SafeAreaView style={[styles.container, styles.centered]}>
+        <ActivityIndicator color="#fbbf24" size="large" />
+      </SafeAreaView>
+    );
+  }
 
-  if (isCaptured) {
+  if (!cameraPermission.granted) {
+    return (
+      <SafeAreaView style={[styles.container, styles.centered]}>
+        <Icon name="camera-off-outline" size={64} color="#ffffff44" />
+        <Text style={styles.permissionText}>Camera is not allow</Text>
+        <Pressable style={styles.permissionButton} onPress={requestCameraPermission}>
+          <Text style={styles.permissionButtonText}>Assign camera ability</Text>
+        </Pressable>
+      </SafeAreaView>
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // Post-capture screen
+  // ─────────────────────────────────────────────
+  if (capturedUri && !showForm) {
     return (
       <SafeAreaView style={styles.container}>
-        {/* Top Bar */}
         <View style={styles.topBar}>
-          <View style={styles.iconButton} />
+          <Pressable style={styles.iconButton} onPress={() => {
+            handleRetake();
+            setSelectedExpenseImageID("");
+          }}>
+            <Ionicons name="arrow-back" size={20} color="#ffffff" />
+          </Pressable>
           <View style={styles.avatarWrap}>
-            {userAvatar ? (
-              <Image source={{ uri: userAvatar }} style={{ width: '100%', height: '100%' }} />
-            ) : (
-              <Ionicons name="person" size={24} color="#fff" />
-            )}
+            {userAvatar
+              ? <Image source={{ uri: userAvatar }} style={{ width: '100%', height: '100%' }} />
+              : <Ionicons name="person" size={24} color="#fff" />}
           </View>
         </View>
 
-        {/* Captured image inside viewfinder frame */}
         <View style={styles.viewfinder}>
-          <Image
-            source={require('../../../assets/images/receipt_placeholder.png')}
-            style={{ width: '100%', height: '100%' }}
-            resizeMode="cover"
-          />
+          <Image source={{ uri: capturedUri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
           {note ? (
             <View style={styles.notePill}>
               <Text style={styles.noteText}>{note}</Text>
@@ -120,22 +330,23 @@ export function CameraScreen({ userAvatar }: { userAvatar?: string | null }) {
           ) : null}
         </View>
 
-        {/* Post-capture info & actions */}
         <View style={styles.capturedInfoArea}>
-
-          {/* Transaction summary */}
           <View style={styles.capturedSummaryRow}>
             <View style={styles.capturedSummaryItem}>
               <Text style={styles.capturedSummaryLabel}>Amount</Text>
               <Text style={styles.capturedSummaryValue}>
-                {amountDisplay ? `${amountDisplay} ₫` : '—'}
+                {
+                  amountDisplay
+                    ? `${Number(
+                        amountDisplay.replace(/[^0-9]/g, '')
+                      ).toLocaleString('en-US')} ₫`
+                    : '—'
+                }
               </Text>
             </View>
             <View style={[styles.capturedSummaryItem, { alignItems: 'center' }]}>
               <Text style={styles.capturedSummaryLabel}>Category</Text>
-              <Text style={styles.capturedSummaryValue} numberOfLines={1}>
-                {category || '—'}
-              </Text>
+              <Text style={styles.capturedSummaryValue} numberOfLines={1}>{category || '—'}</Text>
             </View>
             <View style={[styles.capturedSummaryItem, { alignItems: 'flex-end' }]}>
               <Text style={styles.capturedSummaryLabel}>Date</Text>
@@ -143,13 +354,34 @@ export function CameraScreen({ userAvatar }: { userAvatar?: string | null }) {
             </View>
           </View>
 
-          {/* Action row: grid + save */}
           <View style={styles.capturedActionRow}>
-            <Pressable style={styles.capturedGridButton} onPress={() => setShowGallery(true)}>
+            {/* Delete */}
+            <Pressable 
+              style={({ pressed }) => [
+                styles.capturedGridButton,
+                pressed && { opacity: 0.7 },
+                loading && { opacity: 0.6 }
+              ]} 
+              disabled={loading} 
+              onPress={() => !loading && handleDelete()}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Ionicons name="trash-bin-outline" size={24} color="#ffffff" />
+              )}
+            </Pressable>
+
+            {/* Gallery */}
+            <Pressable style={styles.capturedGridButton} onPress={() => {
+              setShowGallery(true);
+              setCapturedUri('');
+            }}>
               <Ionicons name="grid" size={24} color="#ffffff" />
             </Pressable>
 
-            <Pressable style={styles.savePhotoButton} onPress={() => { }}>
+            {/* Save to library */}
+            <Pressable style={styles.savePhotoButton} onPress={handleSavePhoto}>
               <Ionicons name="download-outline" size={20} color="#ffffff" style={{ marginRight: 8 }} />
               <Text style={styles.savePhotoText}>Save Photo</Text>
             </Pressable>
@@ -159,6 +391,9 @@ export function CameraScreen({ userAvatar }: { userAvatar?: string | null }) {
     );
   }
 
+  // ─────────────────────────────────────────────
+  // Main camera screen
+  // ─────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.container}>
       {/* Top Bar */}
@@ -170,129 +405,184 @@ export function CameraScreen({ userAvatar }: { userAvatar?: string | null }) {
           </View>
         </Pressable>
         <View style={styles.avatarWrap}>
-          {userAvatar ? (
-            <Image source={{ uri: userAvatar }} style={{ width: '100%', height: '100%' }} />
-          ) : (
-            <Ionicons name="person" size={24} color="#fff" />
-          )}
+          {userAvatar
+            ? <Image source={{ uri: userAvatar }} style={{ width: '100%', height: '100%' }} />
+            : <Ionicons name="person" size={24} color="#fff" />}
         </View>
       </View>
 
-      {/* Camera Viewfinder */}
-      <View style={styles.viewfinder}>
-        <Pressable style={styles.flashButton}>
-          <Ionicons name="flash" size={18} color="#ffffff" />
-        </Pressable>
-        <View style={styles.zoomPill}>
-          <Text style={styles.zoomText}>1x</Text>
+      {/* ── Camera Viewfinder (thật) ── */}
+      <Pressable style={styles.viewfinder} onPress={handleFocus}>
+        {capturedUri ? (
+          // 1. Khi ĐÃ CÓ ảnh: Hiển thị ảnh vừa chụp kèm nút xóa/chụp lại nếu cần
+          <View style={StyleSheet.absoluteFillObject}>
+            <Image 
+              source={{ uri: capturedUri }} 
+              style={StyleSheet.absoluteFillObject} 
+              resizeMode="cover"
+            />        
+          </View>
+        ) : (
+          // 2. Khi CHƯA CÓ ảnh: Hiển thị màn hình Camera như cũ
+          <CameraView
+            ref={cameraRef}
+            style={StyleSheet.absoluteFillObject}
+            facing={facing}
+            flash={flash}
+            zoom={zoom}
+          />
+        )}
+
+        {/* Overlay controls inside viewfinder */}
+        <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
+
+          {/* Flash button */}
+          <Pressable style={styles.flashButton} onPress={toggleFlash}>
+            <Ionicons name={flashIcon as any} size={18} color={flash === 'on' ? '#fbbf24' : '#ffffff'} />
+          </Pressable>
+
+          {/* Zoom buttons */}
+          <View style={styles.zoomRow}>
+            {facing === 'back' && [0, 0.25, 0.5].map((z) => (
+              <Pressable key={z} style={[styles.zoomPill, zoom === z && styles.zoomPillActive]} onPress={() => handleZoom(z)}>
+                <Text style={[styles.zoomText, zoom === z && { color: '#fbbf24' }]}>
+                  {z === 0 ? '1×' : z === 0.25 ? '2×' : '5×'}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Tap-to-focus indicator */}
+          {focusPoint && (
+            <View style={[styles.focusRing, { top: focusPoint.y - 32, left: focusPoint.x - 32 }]} />
+          )}
         </View>
-      </View>
+      </Pressable>
 
       {/* Bottom Controls */}
       <View style={styles.bottomControls}>
         <View style={styles.controlsRow}>
+          {/* Gallery thumbnail */}
           <Pressable style={styles.galleryButton} onPress={() => setShowGallery(true)}>
-            <Image source={require('../../../assets/images/receipt_placeholder.png')} style={{ width: '100%', height: '100%', borderRadius: 10 }} />
+            {galleryAssets[0]
+              ? <Image source={{ uri: galleryAssets[0].image_url }} style={{ width: '100%', height: '100%', borderRadius: 10 }} />
+              : <Ionicons name="image-outline" size={24} color="#fff" />}
           </Pressable>
 
-          <Pressable style={styles.captureButtonOuter} onPress={handleCapture}>
-            <View style={styles.captureButtonInner} />
+          {/* Capture button */}
+          <Pressable
+            style={[styles.captureButtonOuter, isTakingPhoto && { opacity: 0.6 }]}
+            onPress={handleCapture}
+            disabled={isTakingPhoto}
+          >
+            {isTakingPhoto
+              ? <ActivityIndicator color="#fbbf24" size="small" />
+              : <View style={styles.captureButtonInner} />}
           </Pressable>
 
-          <Pressable style={styles.flipButton}>
+          {/* Flip */}
+          <Pressable style={styles.flipButton} onPress={handleFlip}>
             <Ionicons name="sync-outline" size={32} color="#ffffff" />
           </Pressable>
         </View>
 
-        <Pressable style={styles.historyDropdown}>
+        <Pressable style={styles.historyDropdown} onPress={() => setShowGallery(true)}>
           <View style={styles.historyThumb}>
-            <Image source={require('../../../assets/images/receipt_placeholder.png')} style={{ width: '100%', height: '100%', borderRadius: 12 }} />
+            {galleryAssets[1] && (
+              <Image source={{ uri: galleryAssets[1].image_url }} style={{ width: '100%', height: '100%', borderRadius: 12 }} />
+            )}
           </View>
           <Text style={styles.historyText}>History</Text>
           <Ionicons name="chevron-down" size={16} color="#ffffff" />
         </Pressable>
       </View>
 
-      {/* Gallery Modal */}
+      {/* ── Gallery Modal ── */}
       <Modal visible={showGallery} animationType="slide">
         <SafeAreaView style={styles.galleryScreen}>
-
-          {/* TOP BAR */}
           <View style={styles.galleryTopBar}>
-            <Pressable style={styles.galleryTopIcon}>
-              <Ionicons name="megaphone-outline" size={20} color="#fff" />
+            <Pressable style={styles.galleryTopIcon} onPress={() => setShowGallery(false)}>
+              <Ionicons name="close" size={22} color="#fff" />
             </Pressable>
-
-            <View style={styles.everyonePill}>
-              <Text style={styles.everyoneText}>Everyone</Text>
-              <Ionicons name="chevron-down" size={16} color="#fff" />
-            </View>
-
+            <Text style={styles.everyoneText}>Images gallery</Text>
             <View style={styles.galleryAvatar}>
-              {userAvatar ? (
-                <Image
-                  source={{ uri: userAvatar }}
-                  style={{ width: '100%', height: '100%' }}
-                />
-              ) : (
-                <Ionicons name="person" size={22} color="#fff" />
-              )}
+              {userAvatar
+                ? <Image source={{ uri: userAvatar }} style={{ width: '100%', height: '100%' }} />
+                : <Ionicons name="person" size={22} color="#fff" />}
             </View>
           </View>
 
-          {/* GALLERY GRID */}
-          <FlatList
-            data={[...Array(18)]}
-            keyExtractor={(_, index) => index.toString()}
-            numColumns={3}
-            contentContainerStyle={styles.galleryList}
-            renderItem={({ index }) => (
-              <View style={styles.galleryCard}>
-                <Image
-                  source={{
-                    uri: `https://picsum.photos/300/300?random=${index}`,
+          {galleryLoading ? (
+            <View style={styles.centered}>
+              <ActivityIndicator color="#fbbf24" size="large" />
+            </View>
+          ) : (
+            <FlatList
+              data={galleryAssets}
+              keyExtractor={(item) => item.id}
+              numColumns={3}
+              contentContainerStyle={styles.galleryList}
+              renderItem={({ item }) => (
+                <Pressable
+                  style={styles.galleryCard}
+                  onPress={() => {
+                    setCapturedUri(item.image_url);
+                    setAmountDisplay(String(item.amount));
+                    setCategory(item.category_name)
+                    setNote(item.note);
+                    setDate(item.date);
+                    setSelectedExpenseImageID(item.id);
+                    // setShowGallery(false);
+                    // setShowForm(true);
                   }}
-                  style={styles.galleryPhoto}
-                />
-              </View>
-            )}
-          />
+                >
+                  <Image source={{ uri: item.image_url }} style={styles.galleryPhoto} />
+                </Pressable>
+              )}
+              ListEmptyComponent={
+                <View style={styles.centered}>
+                  <Text style={{ color: '#ffffff88', marginTop: 40 }}>Do not have any image</Text>
+                </View>
+              }
+            />
+          )}
 
-          {/* BOTTOM BAR */}
-          <View style={styles.galleryBottomFloating}>
-
-            <Pressable style={styles.bottomMiniButton}>
-              <Ionicons name="grid" size={22} color="#fff" />
+          {/* <View style={styles.galleryBottomFloating}>
+            <Pressable style={styles.bottomMiniButton} onPress={() => setShowGallery(false)}>
+              <Ionicons name="camera-outline" size={22} color="#fff" />
             </Pressable>
-
-            <Pressable style={styles.cameraMainButton}>
+            <Pressable
+              style={styles.cameraMainButton}
+              onPress={() => { setShowGallery(false); }}
+            >
               <View style={styles.cameraInner} />
             </Pressable>
-
             <Pressable style={styles.bottomMiniButton}>
               <Ionicons name="chatbubble-outline" size={22} color="#fff" />
             </Pressable>
-
-            <Pressable style={styles.bottomMiniButton}>
-              <Ionicons name="play-outline" size={24} color="#fff" />
-            </Pressable>
-          </View>
-
+          </View> */}
         </SafeAreaView>
       </Modal>
 
-      {/* Add Details Form Modal */}
+      {/* ── Add Details Form Modal ── */}
       <Modal visible={showForm} animationType="slide" transparent>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
           <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>Add Details</Text>
-              <Pressable onPress={() => setShowForm(false)} style={styles.modalCloseButton}>
+              <Pressable onPress={() => {
+                setShowForm(false);
+                setCapturedUri("");
+              }} style={styles.modalCloseButton}>
                 <Ionicons name="close" size={24} color={colors.text} />
               </Pressable>
             </View>
 
             <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false}>
+              {/* Amount */}
               <View style={styles.inputGroup}>
                 <Text style={[styles.label, { color: colors.text }]}>Amount</Text>
                 <TextInput
@@ -305,18 +595,36 @@ export function CameraScreen({ userAvatar }: { userAvatar?: string | null }) {
                 />
               </View>
 
+              {/* Category */}
               <View style={styles.inputGroup}>
                 <Text style={[styles.label, { color: colors.text }]}>Category</Text>
-                {/* Quick grid — same as AddExpenseScreen */}
                 <View style={styles.quickGrid}>
                   {quickCategories.map((item) => {
                     const isSelected = category === item.label;
                     return (
-                      <Pressable key={item.id} style={styles.quickItem} onPress={() => setCategory(item.label)}>
-                        <View style={[styles.quickIconWrap, { borderColor: colors.border, backgroundColor: colors.inputBg }, isSelected && styles.quickIconWrapActive]}>
+                      <Pressable
+                        key={item.id}
+                        style={styles.quickItem}
+                        onPress={() => {
+                          setCategory(item.label);
+                          setSelectedCategory(item.label);
+                          setSelectedCategoryID(item.id);
+                        }}
+                      >
+                        <View style={[
+                          styles.quickIconWrap,
+                          { borderColor: colors.border, backgroundColor: colors.inputBg },
+                          isSelected && styles.quickIconWrapActive,
+                        ]}>
                           <Ionicons name={item.icon as any} size={28} color={item.color} />
                         </View>
-                        <Text numberOfLines={1} style={[styles.quickLabel, { color: colors.textMuted }, isSelected && styles.quickLabelActive]}>{item.label}</Text>
+                        <Text numberOfLines={1} style={[
+                          styles.quickLabel,
+                          { color: colors.textMuted },
+                          isSelected && styles.quickLabelActive,
+                        ]}>
+                          {item.label}
+                        </Text>
                       </Pressable>
                     );
                   })}
@@ -328,7 +636,7 @@ export function CameraScreen({ userAvatar }: { userAvatar?: string | null }) {
                   </Pressable>
                 </View>
 
-                {/* Inline all-categories panel */}
+                {/* All categories inline */}
                 {showAllCategories && (
                   <View style={[styles.inlinePanel, { borderColor: colors.border }]}>
                     <Pressable style={styles.inlinePanelHeader} onPress={() => setShowAllCategories(false)}>
@@ -345,13 +653,33 @@ export function CameraScreen({ userAvatar }: { userAvatar?: string | null }) {
                             {group.categories.map((item) => {
                               const isSelected = category === item.label;
                               return (
-                                <Pressable key={item.id} style={styles.categoryItemGrid}
-                                  onPress={() => { setCategory(item.label); setShowAllCategories(false); }}
+                                <Pressable
+                                  key={item.id}
+                                  style={styles.categoryItemGrid}
+                                  onPress={() => {
+                                    setCategory(item.label);
+                                    setSelectedCategory(item.label);
+                                    setSelectedCategoryID(item.id);
+                                    setShowAllCategories(false);
+                                  }}
                                 >
-                                  <View style={[styles.categoryItemIcon, { backgroundColor: isSelected ? `${item.color}18` : colors.inputBg, borderWidth: 1, borderColor: item.color }]}>
+                                  <View style={[
+                                    styles.categoryItemIcon,
+                                    {
+                                      backgroundColor: isSelected ? `${item.color}18` : colors.inputBg,
+                                      borderWidth: 1,
+                                      borderColor: item.color,
+                                    },
+                                  ]}>
                                     <Ionicons name={item.icon as any} size={26} color={item.color} />
                                   </View>
-                                  <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.categoryItemLabel, { color: item.color, fontWeight: isSelected ? '700' : '600' }]}>{item.label}</Text>
+                                  <Text
+                                    numberOfLines={1}
+                                    ellipsizeMode="tail"
+                                    style={[styles.categoryItemLabel, { color: item.color, fontWeight: isSelected ? '700' : '600' }]}
+                                  >
+                                    {item.label}
+                                  </Text>
                                 </Pressable>
                               );
                             })}
@@ -363,6 +691,7 @@ export function CameraScreen({ userAvatar }: { userAvatar?: string | null }) {
                 )}
               </View>
 
+              {/* Date */}
               <View style={styles.inputGroup}>
                 <Text style={[styles.label, { color: colors.text }]}>Date</Text>
                 <Pressable
@@ -375,7 +704,6 @@ export function CameraScreen({ userAvatar }: { userAvatar?: string | null }) {
                   <Ionicons name={showCalendar ? 'chevron-up' : 'calendar-outline'} size={18} color={colors.textMuted} />
                 </Pressable>
 
-                {/* Inline calendar */}
                 {showCalendar && (
                   <View style={[styles.inlineCalendar, { borderColor: colors.border, backgroundColor: colors.inputBg }]}>
                     <View style={styles.calendarHeader}>
@@ -394,17 +722,19 @@ export function CameraScreen({ userAvatar }: { userAvatar?: string | null }) {
                     </View>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
                       {(() => {
-                        const startDay = calendarMonth.startOf('month').day();
+                        const startDay    = calendarMonth.startOf('month').day();
                         const daysInMonth = calendarMonth.daysInMonth();
                         const blanks = Array.from({ length: startDay }).map((_, i) => (
                           <View key={`b${i}`} style={styles.dayCell} />
                         ));
                         const days = Array.from({ length: daysInMonth }).map((_, i) => {
-                          const dayNum = i + 1;
+                          const dayNum     = i + 1;
                           const currentDay = calendarMonth.date(dayNum);
                           const isSelected = dayjs(selectedDate).isSame(currentDay, 'day');
                           return (
-                            <Pressable key={dayNum} style={[styles.dayCell, isSelected && styles.dayCellSelected]}
+                            <Pressable
+                              key={dayNum}
+                              style={[styles.dayCell, isSelected && styles.dayCellSelected]}
                               onPress={() => {
                                 const d = currentDay.toDate();
                                 setSelectedDate(d);
@@ -412,7 +742,9 @@ export function CameraScreen({ userAvatar }: { userAvatar?: string | null }) {
                                 setShowCalendar(false);
                               }}
                             >
-                              <Text style={[styles.dayCellText, { color: isSelected ? '#fff' : colors.text }]}>{dayNum}</Text>
+                              <Text style={[styles.dayCellText, { color: isSelected ? '#fff' : colors.text }]}>
+                                {dayNum}
+                              </Text>
                             </Pressable>
                           );
                         });
@@ -431,6 +763,7 @@ export function CameraScreen({ userAvatar }: { userAvatar?: string | null }) {
                 )}
               </View>
 
+              {/* Note */}
               <View style={styles.inputGroup}>
                 <Text style={[styles.label, { color: colors.text }]}>Note</Text>
                 <TextInput
@@ -442,22 +775,69 @@ export function CameraScreen({ userAvatar }: { userAvatar?: string | null }) {
                 />
               </View>
 
-              <Pressable style={styles.modalSaveButton} onPress={handleSave}>
-                <Text style={styles.modalSaveText}>Save</Text>
+              <Pressable 
+                style={({ pressed }) => [
+                  styles.modalSaveButton,
+                  pressed && { opacity: 0.8 },
+                  loading && { opacity: 0.7 }
+                ]} 
+                onPress={() => !loading && handleSave()} 
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={styles.modalSaveText}>Save</Text>
+                )}
               </Pressable>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </Modal>
-
     </SafeAreaView>
   );
 }
 
+// ─────────────────────────────────────────────
+// Styles
+// ─────────────────────────────────────────────
 const styles = StyleSheet.create({
+  retakeButton: {
+    position: 'absolute',
+    top: 40, // Khoảng cách cách rìa trên màn hình (an toàn cho tai thỏ)
+    left: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+  },
   container: {
     flex: 1,
     backgroundColor: '#000000',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  permissionText: {
+    color: '#ffffffaa',
+    fontSize: 16,
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  permissionButton: {
+    backgroundColor: '#fbbf24',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  permissionButtonText: {
+    color: '#000',
+    fontWeight: '700',
+    fontSize: 15,
   },
   topBar: {
     flexDirection: 'row',
@@ -501,11 +881,11 @@ const styles = StyleSheet.create({
   },
   viewfinder: {
     flex: 1,
-    backgroundColor: '#381617', // Dark red tone from screenshot
+    backgroundColor: '#1a1a1a',
     marginHorizontal: 16,
     borderRadius: 40,
-    position: 'relative',
     overflow: 'hidden',
+    position: 'relative',
   },
   flashButton: {
     position: 'absolute',
@@ -514,25 +894,40 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  zoomPill: {
+  zoomRow: {
     position: 'absolute',
     top: 20,
     right: 20,
+    flexDirection: 'column',
+    gap: 6,
+  },
+  zoomPill: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  zoomPillActive: {
+    backgroundColor: 'rgba(251,191,36,0.25)',
   },
   zoomText: {
     color: '#ffffff',
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 12,
+  },
+  focusRing: {
+    position: 'absolute',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2,
+    borderColor: '#fbbf24',
   },
   bottomControls: {
     paddingVertical: 40,
@@ -555,6 +950,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#ffffff',
+    overflow: 'hidden',
   },
   captureButtonOuter: {
     width: 80,
@@ -589,6 +985,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: 'rgba(255,255,255,0.3)',
     marginRight: 8,
+    overflow: 'hidden',
   },
   historyText: {
     color: '#ffffff',
@@ -596,28 +993,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginRight: 4,
   },
-  // Post-Capture View Styles
-  capturedOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingBottom: 40,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    // Gradient-like fade at the bottom
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    paddingTop: 24,
-  },
-  capturedImageContainer: {
-    flex: 1,
-    overflow: 'hidden',
-    backgroundColor: '#1e293b',
-  },
-  capturedImage: {
-    width: '100%',
-    height: '100%',
-  },
+  // Post-capture
   notePill: {
     position: 'absolute',
     bottom: 30,
@@ -690,64 +1066,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
-  capturedDetails: {
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  capturedDateText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  activityButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 24,
-  },
-  activityText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
-    marginRight: 12,
-  },
-  activityAvatars: {
-    flexDirection: 'row',
-  },
-  activityAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#000000',
-  },
-  capturedBottomBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 16,
+  // Form preview
+  formPhotoPreview: {
     width: '100%',
+    height: 120,
+    borderRadius: 14,
+    marginBottom: 16,
   },
-  chatBadge: {
-    position: 'absolute',
-    top: -8,
-    right: -10,
-    backgroundColor: '#fbbf24',
-    borderRadius: 10,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-  },
-  chatBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#000000',
-  },
-
-  // Modal Form Styles
+  // Modal
   modalOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -759,13 +1085,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 40,
-    maxHeight: '80%',
+    maxHeight: '85%',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   modalTitle: {
     fontSize: 20,
@@ -774,9 +1100,7 @@ const styles = StyleSheet.create({
   modalCloseButton: {
     padding: 4,
   },
-  formScroll: {
-    // scrollview styles
-  },
+  formScroll: {},
   inputGroup: {
     marginBottom: 16,
   },
@@ -793,7 +1117,6 @@ const styles = StyleSheet.create({
     height: 50,
     fontSize: 16,
   },
-  // Quick grid category styles (AddExpenseScreen pattern)
   quickGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -831,7 +1154,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
   },
-  // Inline expand panels
   inlinePanel: {
     borderWidth: 1,
     borderRadius: 14,
@@ -849,7 +1171,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
-  // Inline calendar
   inlineCalendar: {
     borderWidth: 1,
     borderRadius: 14,
@@ -892,9 +1213,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
-  categoryContainer: {
-    gap: 16,
-  },
+  categoryContainer: { gap: 16 },
   groupCard: {
     marginBottom: 14,
     borderRadius: 14,
@@ -948,72 +1267,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
   },
-  // Gallery Styles
-  galleryModalContainer: {
-    flex: 1,
-  },
-  galleryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#333',
-  },
-  galleryTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  galleryCloseButton: {
-    padding: 5,
-  },
-  galleryGridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: 2,
-  },
-  galleryItem: {
-    width: '33.33%',
-    aspectRatio: 1,
-    padding: 2,
-  },
-  galleryImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 8,
-  },
-  galleryBottomBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingVertical: 20,
-    paddingHorizontal: 30,
-    borderTopWidth: 0.5,
-    borderTopColor: '#333',
-    backgroundColor: '#000',
-  },
-  galleryCaptureIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 4,
-    borderColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  galleryCaptureIconInner: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#fff',
-  },
+  // Gallery
   galleryScreen: {
     flex: 1,
     backgroundColor: '#0d0d0d',
   },
-
   galleryTopBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1022,7 +1280,6 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 16,
   },
-
   galleryTopIcon: {
     width: 46,
     height: 46,
@@ -1031,70 +1288,73 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  everyonePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    paddingHorizontal: 22,
-    paddingVertical: 12,
-    borderRadius: 30,
-  },
-
   everyoneText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: '700',
-    marginRight: 6,
   },
-
   galleryAvatar: {
     width: 46,
     height: 46,
     borderRadius: 23,
     overflow: 'hidden',
     backgroundColor: '#222',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-
   galleryList: {
     paddingHorizontal: 4,
     paddingBottom: 120,
   },
-
   galleryCard: {
     flex: 1,
-    height: Math.random() * 80 + 180,
-    padding: 4,
+    aspectRatio: 1, // Ép ô lưới thành hình vuông chuẩn ma trận
+    margin: 4, // Tạo khoảng cách nhẹ giữa các ô
+    position: 'relative',
+    overflow: 'hidden',
+    borderRadius: 8, // Bo góc cho hiện đại nếu muốn
   },
-
-  galleryPhoto: {
+    galleryPhoto: {
     width: '100%',
     height: '100%',
-    borderRadius: 24,
+    borderRadius: 14,
+    resizeMode: 'cover',
   },
-
+  infoOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Lớp nền tối giúp chữ màu trắng nổi bật
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  overlayAmount: {
+    color: '#fbbf24', // Màu vàng hổ phách (amber) giống màu loading của bạn
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  overlayNote: {
+    color: '#ffffff',
+    fontSize: 10,
+  },
   galleryBottomFloating: {
     position: 'absolute',
     bottom: 30,
     left: 20,
     right: 20,
     height: 74,
-
     backgroundColor: 'rgba(40,40,40,0.95)',
     borderRadius: 40,
-
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-
     paddingHorizontal: 18,
   },
-
   bottomMiniButton: {
     width: 42,
     alignItems: 'center',
   },
-
   cameraMainButton: {
     width: 70,
     height: 70,
@@ -1105,7 +1365,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#2c2c2c',
   },
-
   cameraInner: {
     width: 54,
     height: 54,

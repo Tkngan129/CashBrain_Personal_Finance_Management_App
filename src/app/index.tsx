@@ -1,34 +1,38 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useState } from 'react';
 import {
-    Pressable,
-    StatusBar,
-    StyleSheet,
-    Text,
-    View,
+	ActivityIndicator,
+	Pressable,
+	StatusBar,
+	StyleSheet,
+	Text,
+	View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AuthProvider } from '@/src/context/authContext';
+import { AIChatbotProvider } from '../context/aiChatbotContext';
+import { AnalysisProvider } from '../context/analysisContext';
+import { ExpenseProvider, useExpenses } from '../context/expenseContext';
+import { ThemeProvider, useColors } from '../context/ThemeContext';
+import { TransactionProvider } from '../context/TransactionContext';
 import { AddExpenseScreen } from './components/AddExpenseScreen';
+import { AddPaymentMethodScreen } from './components/AddPaymentMethodScreen';
 import { AIChatScreen } from './components/AIChatScreen';
 import { AllTransactionsScreen } from './components/AllTransactionsScreen';
 import { AnalyticsScreen } from './components/AnalyticsScreen';
+import { BudgetSettingsScreen } from './components/BudgetSettingsScreen';
 import { CameraScreen } from './components/CameraScreen';
 import { DashboardScreen } from './components/DashboardScreen';
-import { ProfileScreen } from './components/ProfileScreen';
-import { ManageCategoriesScreen } from './components/ManageCategoriesScreen';
+import { Category, EditCategoryScreen } from './components/EditCategoryScreen';
 import { EditProfileScreen } from './components/EditProfileScreen';
-import { BudgetSettingsScreen } from './components/BudgetSettingsScreen';
-import { PaymentMethodsScreen } from './components/PaymentMethodsScreen';
-import { TransactionDetailScreen, Transaction } from './components/TransactionDetailScreen';
 import { EditTransactionScreen } from './components/EditTransactionScreen';
-import { EditCategoryScreen, Category } from './components/EditCategoryScreen';
-import { PaymentMethod } from './components/PaymentMethodsScreen';
-import { AddPaymentMethodScreen } from './components/AddPaymentMethodScreen';
 import { LoginScreen } from './components/LoginScreen';
+import { ManageCategoriesScreen } from './components/ManageCategoriesScreen';
+import { PaymentMethod, PaymentMethodsScreen } from './components/PaymentMethodsScreen';
+import { ProfileScreen } from './components/ProfileScreen';
 import { SignupScreen } from './components/SignupScreen';
-import { ThemeProvider, useColors } from '../context/ThemeContext';
-import { TransactionProvider, useTransactions } from '../context/TransactionContext';
+import { Transaction, TransactionDetailScreen } from './components/TransactionDetailScreen';
 
 type ScreenId =
 	| 'home'
@@ -67,20 +71,37 @@ export default function App() {
   return (
     <ThemeProvider>
       <TransactionProvider>
-        <AppInner />
+        <AuthProvider>
+					<ExpenseProvider>
+						<AnalysisProvider>
+							<AIChatbotProvider>
+								<AppInner />
+							</AIChatbotProvider>
+						</AnalysisProvider>
+					</ExpenseProvider>
+				</AuthProvider>
       </TransactionProvider>
     </ThemeProvider>
   );
 }
 
 function AppInner() {
-	const colors = useColors();
-  const { updateTransaction, deleteTransaction } = useTransactions();
-	const [activeScreen, setActiveScreen] =
-		useState<ScreenId>('home');
+  const colors = useColors();
+  // Lấy thêm biến loading từ hook useExpenses
+  const { updateTransaction: fetchUpdateTransactions, deleteTransaction: fetchDeleteTransaction, loading } = useExpenses();
+
+  const updateTransaction = (updatedTx: Transaction) => {
+    fetchUpdateTransactions(updatedTx, updatedTx.type || "");
+  };
+
+  const deleteTransaction = (transactionID: string, type: string) => {
+    fetchDeleteTransaction(transactionID, type);
+  }
+  
+  const [activeScreen, setActiveScreen] = useState<ScreenId>('home');
   const [activeReturnScreen, setActiveReturnScreen] = useState<ScreenId>('home');
-	const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-	const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
   const [totalBudget, setTotalBudget] = useState<number>(4000000);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([
@@ -88,30 +109,28 @@ function AppInner() {
     { id: '2', type: 'card', name: 'Ngan Tran', number: '9876543298769876', expiry: '05/27', cardBrand: 'MasterCard', color: '#f43f5e' },
     { id: '3', type: 'bank', name: 'Ngan Tran', number: '4567', bankName: 'Vietcombank' }
   ]);
-	const [isAuthenticated, setIsAuthenticated] = useState(false);
-	const [authScreen, setAuthScreen] = useState<'login' | 'signup'>('login');
-	const [addTransactionType, setAddTransactionType] =
-		useState<'expense' | 'income'>('expense');
-	const [addTransactionReturnScreen, setAddTransactionReturnScreen] =
-		useState<ScreenId>('home');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authScreen, setAuthScreen] = useState<'login' | 'signup'>('login');
+  const [addTransactionType, setAddTransactionType] = useState<'expense' | 'income'>('expense');
+  const [addTransactionReturnScreen, setAddTransactionReturnScreen] = useState<ScreenId>('home');
 
-	const handleNavigate = (screenId: string) => {
-		setActiveScreen(screenId as ScreenId);
-	};
+  const handleNavigate = (screenId: string) => {
+    setActiveScreen(screenId as ScreenId);
+  };
 
-	const handleAddTransaction = useCallback((
-		type: 'expense' | 'income',
-		returnScreen: ScreenId = 'home',
-	) => {
-		setAddTransactionType(type);
-		setAddTransactionReturnScreen(returnScreen);
-		setActiveScreen('add');
-	}, []);
+  const handleAddTransaction = useCallback((
+    type: 'expense' | 'income',
+    returnScreen: ScreenId = 'home',
+  ) => {
+    setAddTransactionType(type);
+    setAddTransactionReturnScreen(returnScreen);
+    setActiveScreen('add');
+  }, []);
 
-	const getScreenContent = () => {
-		switch (activeScreen) {
-			case 'home':
-				return <DashboardScreen 
+  const getScreenContent = () => {
+    switch (activeScreen) {
+      case 'home':
+        return <DashboardScreen 
           onNavigate={(screen) => setActiveScreen(screen as any)} 
           onAddTransaction={handleAddTransaction}
           onTransactionPress={(tx) => {
@@ -121,8 +140,8 @@ function AppInner() {
           }}
         />;
 
-			case 'analytics':
-				return <AnalyticsScreen 
+      case 'analytics':
+        return <AnalyticsScreen 
           onAddTransaction={(type) => handleAddTransaction(type, 'analytics')}
           onTransactionPress={(tx) => {
             setSelectedTransaction(tx as any);
@@ -131,33 +150,33 @@ function AppInner() {
           }}
         />;
 
-			case 'transactions':
-				return (
-					<AllTransactionsScreen
-						onClose={() => setActiveScreen('home')}
+      case 'transactions':
+        return (
+          <AllTransactionsScreen
+            onClose={() => setActiveScreen('home')}
             onTransactionPress={(tx) => {
               setSelectedTransaction(tx);
               setActiveReturnScreen('transactions');
               setActiveScreen('transactionDetail');
             }}
-					/>
-				);
+          />
+        );
 
-			case 'add':
-				return (
-					<AddExpenseScreen
-						initialType={addTransactionType}
-						onClose={() =>
-							setActiveScreen(addTransactionReturnScreen)
-						}
-					/>
-				);
+      case 'add':
+        return (
+          <AddExpenseScreen
+            initialType={addTransactionType}
+            onClose={() =>
+              setActiveScreen(addTransactionReturnScreen)
+            }
+          />
+        );
 
-			case 'chat':
-				return <AIChatScreen />;
+      case 'chat':
+        return <AIChatScreen />;
 
-			case 'profile':
-				return <ProfileScreen 
+      case 'profile':
+        return <ProfileScreen 
           userAvatar={userAvatar}
           totalBudget={totalBudget}
           onLogout={() => setIsAuthenticated(false)} 
@@ -167,8 +186,8 @@ function AppInner() {
           onNavigatePayment={() => setActiveScreen('payment')}
         />;
 
-			case 'categories':
-				return <ManageCategoriesScreen 
+      case 'categories':
+        return <ManageCategoriesScreen 
           onBack={() => setActiveScreen('profile')} 
           onEditCategory={(cat) => {
             setSelectedCategory(cat);
@@ -182,25 +201,24 @@ function AppInner() {
             category={selectedCategory}
             onCancel={() => setActiveScreen('categories')}
             onSave={(updatedCat) => {
-              // Mock saving for now - in a real app this would update a context or backend
               setActiveScreen('categories');
             }}
           />
         );
-			case 'editProfile':
-				return <EditProfileScreen 
+      case 'editProfile':
+        return <EditProfileScreen 
           userAvatar={userAvatar}
           onSaveAvatar={setUserAvatar}
           onBack={() => setActiveScreen('profile')} 
         />;
-			case 'budget':
-				return <BudgetSettingsScreen 
+      case 'budget':
+        return <BudgetSettingsScreen 
           initialBudget={totalBudget}
           onSaveBudget={(budget) => setTotalBudget(budget)}
           onBack={() => setActiveScreen('profile')} 
         />;
-			case 'payment':
-				return <PaymentMethodsScreen 
+      case 'payment':
+        return <PaymentMethodsScreen 
           paymentMethods={paymentMethods}
           onBack={() => setActiveScreen('profile')} 
           onAddPayment={() => setActiveScreen('addPaymentMethod')}
@@ -221,171 +239,158 @@ function AppInner() {
           }}
         />;
 
-			case 'camera':
-				return <CameraScreen userAvatar={userAvatar} />;
+      case 'camera':
+        return <CameraScreen userAvatar={userAvatar} />;
 
-			case 'transactionDetail':
-				if (!selectedTransaction) return null;
-				return (
-					<TransactionDetailScreen
-						transaction={selectedTransaction}
-						onBack={() => setActiveScreen(activeReturnScreen)}
-						onEdit={() => setActiveScreen('editTransaction')}
+      case 'transactionDetail':
+        if (!selectedTransaction) return null;
+        return (
+          <TransactionDetailScreen
+            transaction={selectedTransaction}
+            onBack={() => setActiveScreen(activeReturnScreen)}
+            onEdit={() => setActiveScreen('editTransaction')}
             onDelete={() => {
-              deleteTransaction(selectedTransaction.id);
+              deleteTransaction(String(selectedTransaction.id), selectedTransaction.type || "");
               setActiveScreen(activeReturnScreen);
             }}
-					/>
-				);
+          />
+        );
 
-			case 'editTransaction':
-				if (!selectedTransaction) return null;
-				return (
-					<EditTransactionScreen
-						transaction={selectedTransaction}
-						onCancel={() => setActiveScreen('transactionDetail')}
-						onSave={(updatedTx) => {
-							setSelectedTransaction(updatedTx);
-              updateTransaction(updatedTx);
-							setActiveScreen('transactionDetail');
-						}}
-					/>
-				);
+      case 'editTransaction':
+        if (!selectedTransaction) return null;
+        return (
+            <EditTransactionScreen
+              transaction={selectedTransaction}
+              onCancel={() => setActiveScreen('transactionDetail')}
+              onSave={(updatedTx) => {
+                setSelectedTransaction(updatedTx);
+                updateTransaction(updatedTx);
+                setActiveScreen('transactionDetail');
+              }}
+            />
+        );
 
-			default:
-				return (
-					<DashboardScreen
-						onNavigate={handleNavigate}
-						onAddTransaction={
-							handleAddTransaction
-						}
-					/>
-				);
-		}
-	};
+      default:
+        return (
+          <DashboardScreen
+            onNavigate={handleNavigate}
+            onAddTransaction={
+              handleAddTransaction
+            }
+          />
+        );
+    }
+  };
 
-	const renderNavItem = (item: NavItem) => {
-		const isProfileGroup = [
-      'profile', 
-      'editProfile', 
-      'categories', 
-      'editCategory', 
-      'budget', 
-      'payment', 
-      'addPaymentMethod'
+  const renderNavItem = (item: NavItem) => {
+    const isProfileGroup = [
+      'profile', 'editProfile', 'categories', 'editCategory', 'budget', 'payment', 'addPaymentMethod'
     ].includes(activeScreen);
 
-		const isActive = 
-      activeScreen === item.id || 
-      (item.id === 'profile' && isProfileGroup);
+    const isActive = activeScreen === item.id || (item.id === 'profile' && isProfileGroup);
 
-		return (
-			<Pressable
-				key={item.id}
-				onPress={() => setActiveScreen(item.id)}
-				style={styles.navItem}
-			>
-				<View
-					style={[
-						styles.navIconContainer,
-						isActive &&
-							styles.navIconContainerActive,
-					]}
-				>
-					<Ionicons
-						name={item.icon as any}
-						size={22}
-						color={
-							isActive
-								? '#1C4D8D'
-								: '#94A3B8'
-						}
-					/>
-				</View>
+    return (
+      <Pressable
+        key={item.id}
+        onPress={() => setActiveScreen(item.id)}
+        style={styles.navItem}
+      >
+        <View style={[styles.navIconContainer, isActive && styles.navIconContainerActive]}>
+          <Ionicons
+            name={item.icon as any}
+            size={22}
+            color={isActive ? '#1C4D8D' : '#94A3B8'}
+          />
+        </View>
+        <Text style={[styles.navLabel, { color: isActive ? '#1C4D8D' : '#94A3B8' }]}>
+          {item.label}
+        </Text>
+      </Pressable>
+    );
+  };
 
-				<Text
-					style={[
-						styles.navLabel,
-						{
-							color: isActive
-								? '#1C4D8D'
-								: '#94A3B8',
-						},
-					]}
-				>
-					{item.label}
-				</Text>
-			</Pressable>
-		);
-	};
+  if (!isAuthenticated) {
+    if (authScreen === 'login') {
+      return <LoginScreen onLogin={(result: boolean) => setIsAuthenticated(result)} onNavigateSignup={() => setAuthScreen('signup')} />;
+    } else {
+      return <SignupScreen onSignup={(result: boolean) => setIsAuthenticated(result)} onNavigateLogin={() => setAuthScreen('login')} />;
+    }
+  }
 
-	if (!isAuthenticated) {
-		if (authScreen === 'login') {
-			return <LoginScreen onLogin={() => setIsAuthenticated(true)} onNavigateSignup={() => setAuthScreen('signup')} />;
-		} else {
-			return <SignupScreen onSignup={() => setIsAuthenticated(true)} onNavigateLogin={() => setAuthScreen('login')} />;
-		}
-	}
+  return (
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.navBar }]}
+      edges={['top', 'left', 'right']}
+    >
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor={colors.navBar}
+      />
 
-	return (
-		<SafeAreaView
-			style={[styles.container, { backgroundColor: colors.navBar }]}
-			edges={['top', 'left', 'right']}
-		>
-			<StatusBar
-				barStyle="dark-content"
-				backgroundColor={colors.navBar}
-			/>
+      <View style={[styles.contentWrapper, { backgroundColor: colors.bg }]}>
+        {getScreenContent()}
+      </View>
 
-			<View style={[styles.contentWrapper, { backgroundColor: colors.bg }]}>
-				{getScreenContent()}
-			</View>
+      <View style={[styles.navBar, { backgroundColor: colors.navBar, borderTopColor: colors.navBorder }]}>
+        {LEFT_NAV.map(renderNavItem)}
 
-			<View style={[styles.navBar, { backgroundColor: colors.navBar, borderTopColor: colors.navBorder }]}>
-				{LEFT_NAV.map(renderNavItem)}
+        <View style={styles.cameraLabelContainer}>
+          <Pressable
+            onPress={() => setActiveScreen('camera')}
+            style={[
+              styles.floatingButton,
+              activeScreen === 'camera' ? styles.floatingButtonActive : styles.floatingButtonBase,
+            ]}
+          >
+            <Ionicons name="camera" size={26} color="#ffffff" />
+          </Pressable>
+          <Text style={[styles.cameraLabel, { color: activeScreen === 'camera' ? '#1C4D8D' : colors.textMuted }]}>
+            Scan
+          </Text>
+        </View>
 
-				<View style={styles.cameraLabelContainer}>
-					<Pressable
-						onPress={() =>
-							setActiveScreen('camera')
-						}
-						style={[
-							styles.floatingButton,
-							activeScreen === 'camera'
-								? styles.floatingButtonActive
-								: styles.floatingButtonBase,
-						]}
-					>
-						<Ionicons
-							name="camera"
-							size={26}
-							color="#ffffff"
-						/>
-					</Pressable>
+        {RIGHT_NAV.map(renderNavItem)}
+      </View>
 
-					<Text
-						style={[
-							styles.cameraLabel,
-							{
-								color:
-									activeScreen ===
-									'camera'
-										? '#1C4D8D'
-										: colors.textMuted,
-							},
-						]}
-					>
-						Scan
-					</Text>
-				</View>
-
-				{RIGHT_NAV.map(renderNavItem)}
-			</View>
-		</SafeAreaView>
-	);
+      {/* --- THÀNH PHẦN LOADING ĐƯỢC THÊM VÀO ĐÂY --- */}
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color="#1C4D8D" />
+            <Text style={styles.loadingText}>Processing...</Text>
+          </View>
+        </View>
+      )}
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
+	loadingOverlay: {
+    ...StyleSheet.absoluteFillObject, // Phủ kín toàn bộ màn hình SafeAreaView
+    backgroundColor: 'rgba(0, 0, 0, 0.4)', // Nền mờ tối màu để làm nổi bật Loader
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999, // Đảm bảo luôn nằm trên cùng các UI khác
+  },
+  loadingCard: {
+    backgroundColor: '#ffffff',
+    paddingVertical: 20,
+    paddingHorizontal: 30,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#1C4D8D',
+    fontWeight: '500',
+  },
 	container: {
 		flex: 1,
 		backgroundColor: '#FFFFFF',

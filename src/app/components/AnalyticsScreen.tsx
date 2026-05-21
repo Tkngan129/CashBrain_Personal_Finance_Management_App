@@ -1,6 +1,8 @@
 import { resolveCategoryMeta } from '@/constants/categories';
+import { CalendarAnalysisResponse, useAnalysis } from '@/src/context/analysisContext';
+import { useExpenses } from '@/src/context/expenseContext';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -11,7 +13,6 @@ import {
 } from 'react-native';
 import Svg, { Circle, G } from 'react-native-svg';
 import { useColors } from '../../context/ThemeContext';
-import { useTransactions } from '../../context/TransactionContext';
 
 type AnalyticsTab = 'expenses' | 'calendar' | 'overview';
 type RangeTab = 'week' | 'month' | 'year';
@@ -27,99 +28,6 @@ const formatCalendarAmount = (value: number) => {
   return `${Math.round(absValue / 1000)}K`;
 };
 
-const totalSpent = 719_000;
-const totalIncome = 4_000_000;
-const netThisMonth = 2_741_000;
-
-const expenseBreakdown = [
-  { name: 'Education', amount: 399_000, color: '#b9a2ff' },
-  { name: 'Shopping', amount: 250_000, color: '#ffb767' },
-  { name: 'Food & Drinks', amount: 45_000, color: '#f9a0a0' },
-  { name: 'Transportation', amount: 25_000, color: '#f6d84f' },
-  { name: 'Bills', amount: 15_000, color: '#4f9cf2' },
-];
-
-const expenseTransactions = [
-  { id: 1, title: 'Online Course', date: 'Apr 10', time: '2:15 PM', amount: -399_000, category: 'Education' },
-  { id: 2, title: 'New Clothes', date: 'Apr 9', time: '3:45 PM', amount: -250_000, category: 'Shopping' },
-  { id: 3, title: 'Coffee & Breakfast', date: 'Apr 11', time: '9:30 AM', amount: -45_000, category: 'Food & Drinks' },
-  { id: 4, title: 'Grab to Uni', date: 'Apr 9', time: '8:30 AM', amount: -25_000, category: 'Transportation' },
-  { id: 5, title: 'Monthly Allowance', date: 'Apr 30', time: '8:00 AM', amount: 4_000_000, category: 'Income' },
-];
-
-const calendarTransactions = [
-  { id: 1, day: 1, title: 'Monthly Allowance', time: '08:00 AM', amount: 4_000_000, category: 'Income' },
-  { id: 2, day: 5, title: 'Coffee & Breakfast', time: '09:30 AM', amount: -45_000, category: 'Food & Drinks' },
-  { id: 3, day: 9, title: 'Grab to Uni', time: '08:30 AM', amount: -25_000, category: 'Transportation' },
-  { id: 4, day: 9, title: 'New Clothes', time: '03:45 PM', amount: -250_000, category: 'Shopping' },
-  { id: 5, day: 10, title: 'Online Course', time: '02:15 PM', amount: -399_000, category: 'Education' },
-  { id: 6, day: 11, title: 'Coffee & Breakfast', time: '09:30 AM', amount: -45_000, category: 'Food & Drinks' },
-  { id: 7, day: 14, title: 'Freelance Bonus', time: '05:20 PM', amount: 180_000, category: 'Income' },
-  { id: 8, day: 17, title: 'Lunch with friends', time: '12:10 PM', amount: -65_000, category: 'Food & Drinks' },
-  { id: 9, day: 20, title: 'Utilities refund', time: '10:00 AM', amount: -155_000, category: 'Bills' },
-  { id: 10, day: 23, title: 'Movie night', time: '08:45 PM', amount: -95_000, category: 'Entertainment' },
-];
-
-const calendarDays = [
-  { day: 1, badge: '+400k', type: 'income' },
-  { day: 2 },
-  { day: 3 },
-  { day: 4 },
-  { day: 5, badge: '-45K', type: 'expense' },
-  { day: 6 },
-  { day: 7 },
-  { day: 8 },
-  { day: 9, badge: '-275K', type: 'expense' },
-  { day: 10, badge: '-399K', type: 'expense' },
-  { day: 11, badge: '-45K', type: 'expense' },
-  { day: 12 },
-  { day: 13 },
-  { day: 14, badge: '-180K', type: 'expense' },
-  { day: 15 },
-  { day: 16 },
-  { day: 17, badge: '-65K', type: 'expense' },
-  { day: 18 },
-  { day: 19 },
-  { day: 20, badge: '-155K', type: 'expense' },
-  { day: 21 },
-  { day: 22 },
-  { day: 23, badge: '-95K', type: 'expense' },
-  { day: 24 },
-  { day: 25 },
-  { day: 26 },
-  { day: 27 },
-  { day: 28 },
-  { day: 29 },
-  { day: 30 },
-];
-
-const overviewTransactions = [
-  { date: new Date(2024, 11, 12), amount: -260_000 },
-  { date: new Date(2024, 11, 21), amount: 820_000 },
-  { date: new Date(2025, 0, 7), amount: -400_000 },
-  { date: new Date(2025, 0, 15), amount: -150_000 },
-  { date: new Date(2025, 1, 4), amount: -1_843_000 },
-  { date: new Date(2025, 1, 12), amount: 1_281_835 },
-  { date: new Date(2025, 1, 20), amount: -230_000 },
-  { date: new Date(2025, 1, 28), amount: 450_000 },
-  { date: new Date(2025, 2, 6), amount: -320_000 },
-  { date: new Date(2025, 3, 7), amount: -45_000 },
-  { date: new Date(2025, 3, 8), amount: -250_000 },
-  { date: new Date(2025, 3, 9), amount: -25_000 },
-  { date: new Date(2025, 3, 10), amount: -399_000 },
-  { date: new Date(2025, 3, 11), amount: -45_000 },
-  { date: new Date(2025, 3, 12), amount: 180_000 },
-  { date: new Date(2026, 3, 7), amount: -45_000 },
-  { date: new Date(2026, 4, 4), amount: -65_000 },
-  { date: new Date(2026, 5, 15), amount: -95_000 },
-  { date: new Date(2026, 6, 10), amount: -155_000 },
-  { date: new Date(2026, 7, 21), amount: -120_000 },
-  { date: new Date(2026, 8, 9), amount: -175_000 },
-  { date: new Date(2026, 9, 2), amount: -85_000 },
-  { date: new Date(2026, 10, 18), amount: -140_000 },
-  { date: new Date(2026, 11, 12), amount: 4_000_000 },
-];
-
 const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -134,53 +42,139 @@ const formatCompactMoney = (value: number) => {
 interface AnalyticsScreenProps {
   onAddTransaction?: (type: 'expense' | 'income') => void;
   onTransactionPress?: (tx: any) => void;
+  
 }
 
 export function AnalyticsScreen({ onAddTransaction, onTransactionPress }: AnalyticsScreenProps) {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('expenses');
   const [rangeTab, setRangeTab] = useState<RangeTab>('month');
   const [draftRangeTab, setDraftRangeTab] = useState<RangeTab>('month');
-  const [overviewMonthAnchor, setOverviewMonthAnchor] = useState(new Date(2025, 1, 1));
-  const [draftOverviewMonthAnchor, setDraftOverviewMonthAnchor] = useState(new Date(2025, 1, 1));
-  const [overviewYearAnchor, setOverviewYearAnchor] = useState(2025);
-  const [draftOverviewYearAnchor, setDraftOverviewYearAnchor] = useState(2025);
-  const [overviewYearWindowStart, setOverviewYearWindowStart] = useState(2024);
-  const [draftOverviewYearWindowStart, setDraftOverviewYearWindowStart] = useState(2024);
-  const [draftWeekIndex, setDraftWeekIndex] = useState(0);
+  // Lấy thời điểm hiện tại
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+
+  // 1. Month Anchor: Khởi tạo là tháng hiện tại, ngày 1
+  const [overviewMonthAnchor, setOverviewMonthAnchor] = useState(new Date(currentYear, currentMonth, 1));
+  const [draftOverviewMonthAnchor, setDraftOverviewMonthAnchor] = useState(new Date(currentYear, currentMonth, 1));
+
+  // 2. Year Anchor: Khởi tạo là năm hiện tại
+  const [overviewYearAnchor, setOverviewYearAnchor] = useState(currentYear);
+  const [draftOverviewYearAnchor, setDraftOverviewYearAnchor] = useState(currentYear);
+
+  // 3. Year Window Start: Thường khởi tạo trước năm hiện tại một khoảng (ví dụ 2 năm) để tạo danh sách chọn
+  const [overviewYearWindowStart, setOverviewYearWindowStart] = useState(currentYear - 2);
+  const [draftOverviewYearWindowStart, setDraftOverviewYearWindowStart] = useState(currentYear - 2);
+
+  // 4. Week Index: Tính toán tuần hiện tại trong tháng (Tùy chọn)
+  // Nếu bạn muốn mặc định là tuần 1 thì giữ 0. 
+  // Nếu muốn tuần hiện tại, cần một hàm logic tính toán index tuần.
+  const [draftWeekIndex, setDraftWeekIndex] = useState(0); 
   const [appliedWeekIndex, setAppliedWeekIndex] = useState(0);
+
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<number>(1);
-  const [calendarMonthDate, setCalendarMonthDate] = useState(new Date(2026, 3, 1));
+  const [calendarMonthDate, setCalendarMonthDate] = useState(new Date());
   const [showRangePicker, setShowRangePicker] = useState(false);
   const [overviewActiveMetric, setOverviewActiveMetric] = useState<'expenses' | 'income'>('expenses');
   const [showAllCategories, setShowAllCategories] = useState(false);
   const colors = useColors();
-  const { transactions } = useTransactions();
+
+  const { fetchCalendarAnalysis, calendarAnalysis, fetchMonthlyAnalysis, monthlyAnalysis, fetchOverviewTransactionsAnalysis, overviewTransactionsAnalysis} = useAnalysis();
+  const { expenses, transactions} = useExpenses();
+
+  useEffect( () => {
+    fetchCalendarAnalysis();
+    fetchMonthlyAnalysis();
+    fetchOverviewTransactionsAnalysis();
+    const currentDate = new Date();
+    const today = currentDate.getDate();
+    setSelectedCalendarDay(today);
+  }, [fetchCalendarAnalysis, fetchMonthlyAnalysis, fetchOverviewTransactionsAnalysis]);
+
+  useEffect(() => {
+    fetchCalendarAnalysis(calendarMonthDate.toISOString());
+  }, [calendarMonthDate, fetchCalendarAnalysis]);
+
+  
 
   const groupedExpenseTransactions = useMemo(() => {
-    const groups: Record<string, typeof transactions> = {};
-    transactions.forEach((tx) => {
-      const key = tx.date;
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(tx);
-    });
+    if (!transactions || transactions.length === 0) return [];
+
+    // 1. Nhóm các giao dịch theo ngày (Key bây giờ là "2026-05-09")
+    const groups = transactions.reduce<Record<string, typeof transactions[number][]>>((acc, tx) => {
+      const key = tx.date; // "2026-05-09"
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(tx);
+      return acc;
+    }, {});
+
+    // 2. Chuyển object thành array và sắp xếp
     return Object.keys(groups)
       .sort((a, b) => {
-        const dayA = parseInt(a.replace('Apr ', '')) || 0;
-        const dayB = parseInt(b.replace('Apr ', '')) || 0;
-        return dayB - dayA;
+        // Vì định dạng YYYY-MM-DD có thể so sánh trực tiếp bằng chuỗi hoặc chuyển về timestamp
+        // Sắp xếp giảm dần (ngày mới nhất lên đầu)
+        return new Date(b).getTime() - new Date(a).getTime();
       })
-      .map((date) => ({ date, items: groups[date] }));
-  }, []);
+      .map((date) => ({
+        date, // "2026-05-09"
+        // Bạn có thể format lại date ở đây để hiển thị đẹp hơn trên UI nếu muốn (VD: "May 09")
+        items: groups[date]
+      }));
+  }, [transactions]); // Quan trọng: Phải thêm dependency để hàm chạy lại khi có dữ liệu mới
 
   const getAnalyticsCategoryMeta = (category: string) => resolveCategoryMeta(category);
 
   const totalExpensePercentages = useMemo(() => {
-    const total = expenseBreakdown.reduce((sum, item) => sum + item.amount, 0);
-    return expenseBreakdown.map((item) => ({
-      ...item,
-      percentage: (item.amount / total) * 100,
-    }));
-  }, []);
+    const today = new Date();
+    const currentMonth = today.getMonth();        // 0-based (0-11)
+    const currentYear = today.getFullYear();
+
+    // 1. Lọc expense của tháng hiện tại
+    const currentMonthExpenses = expenses.filter(exp => {
+        const expDate = new Date(exp.date);
+        return (
+            expDate.getMonth() === currentMonth &&
+            expDate.getFullYear() === currentYear
+        );
+    });
+
+    // 2. Group by category_name
+    const grouped = currentMonthExpenses.reduce((acc, expense) => {
+        const categoryName = expense.category_name || 'Uncategorized';
+
+        if (!acc[categoryName]) {
+            acc[categoryName] = {
+                category_name: categoryName,
+                category_color: expense.category_color || '#6b7280',
+                category_icon: expense.category_icon || '',
+                category_bg_color: expense.category_bg_color || '',
+                totalAmount: 0,
+                count: 0,
+            };
+        }
+
+        acc[categoryName].totalAmount += Number(expense.amount) || 0;
+        acc[categoryName].count += 1;
+
+        return acc;
+    }, {} as Record<string, any>);
+
+    // 3. Tính tổng chi tiêu của tháng
+    const totalSpent = Object.values(grouped).reduce(
+        (sum, cat) => sum + cat.totalAmount, 
+        0
+    );
+
+    // 4. Tính percentage và chuyển về array
+    return Object.values(grouped)
+            .map(category => ({
+                ...category,
+                percentage: totalSpent > 0 
+                    ? Math.round((category.totalAmount / totalSpent) * 100) 
+                    : 0,
+            }))
+            .sort((a, b) => b.totalAmount - a.totalAmount); // sắp xếp theo số tiền giảm dần
+    }, [expenses]);
 
   const calendarDayData = useMemo(() => {
     const year = calendarMonthDate.getFullYear();
@@ -191,11 +185,17 @@ export function AnalyticsScreen({ onAddTransaction, onTransactionPress }: Analyt
     const firstDayOfWeek = new Date(year, month, 1).getDay();
     const paddingCount = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
 
-    const days = Array.from({ length: daysInMonth }, (_, index) => {
+    type CalendarDayItem = {
+      day: number;
+      transactions: CalendarAnalysisResponse[];
+      total: number;
+      hasTransactions: boolean;
+      isEmpty: boolean;
+    };
+
+    const days: CalendarDayItem[] = Array.from({ length: daysInMonth }, (_, index) => {
       const day = index + 1;
-      // We keep the mock transactions tied to Apr 2026 for continuity
-      const isMockMonth = year === 2026 && month === 3;
-      const transactions = isMockMonth ? calendarTransactions.filter((tx) => tx.day === day) : [];
+      const transactions = calendarAnalysis.filter((tx) => tx.day === day);
       const total = transactions.reduce((sum, tx) => sum + tx.amount, 0);
       return {
         day,
@@ -206,16 +206,16 @@ export function AnalyticsScreen({ onAddTransaction, onTransactionPress }: Analyt
       };
     });
     
-    const padded = Array.from({ length: paddingCount }, (_, idx) => ({
+    const padded: CalendarDayItem[] = Array.from({ length: paddingCount }, (_, idx) => ({
       day: -1 - idx,
-      transactions: [] as typeof calendarTransactions,
+      transactions: [] as CalendarAnalysisResponse[],
       total: 0,
       hasTransactions: false,
       isEmpty: true,
     })).concat(days);
     
     return padded;
-  }, [calendarMonthDate]);
+  }, [calendarMonthDate, calendarAnalysis]);
 
   const selectedDayData = useMemo(
     () => calendarDayData.find((item) => item.day === selectedCalendarDay && !item.isEmpty) ?? calendarDayData.find(item => !item.isEmpty) ?? calendarDayData[0],
@@ -230,45 +230,149 @@ export function AnalyticsScreen({ onAddTransaction, onTransactionPress }: Analyt
     });
   };
 
+  const START_OF_WEEK = 1; // Monday = 1, Sunday = 0 (có thể đưa vào state nếu cần dynamic)
+
+  const getStartOfWeek = useCallback((date: Date, startOfWeek: number = START_OF_WEEK): Date => {
+    const d = new Date(date);
+    const day = d.getDay(); // 0 (CN) -> 6 (T7)
+    const diff = (day - startOfWeek + 7) % 7;
+    d.setDate(d.getDate() - diff);
+    return d;
+  }, []);
+
+  const getWeekIndexOfMonth = useCallback((date: Date, startOfWeek: number = START_OF_WEEK): number => {
+    const firstDayOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+    const startOfFirstWeek = getStartOfWeek(firstDayOfMonth, startOfWeek);
+    const diffDays = Math.floor((date.getTime() - startOfFirstWeek.getTime()) / (86400000));
+    return Math.floor(diffDays / 7);
+  }, [getStartOfWeek]);
+
+  const getWeekRangeInMonth = useCallback((
+    year: number,
+    month: number,
+    weekIndex: number,
+    startOfWeek: number = START_OF_WEEK
+  ): { start: Date; end: Date } => {
+    const firstDayOfMonth = new Date(year, month, 1);
+    const startOfFirstWeek = getStartOfWeek(firstDayOfMonth, startOfWeek);
+    const start = new Date(startOfFirstWeek);
+    start.setDate(startOfFirstWeek.getDate() + weekIndex * 7);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return { start, end };
+  }, [getStartOfWeek]);
+
+  /**
+ * Trả về mảng các tuần trong một tháng cụ thể
+ * Mỗi phần tử: { index, label, startDate, endDate }
+ */
+  const getWeekRangesInMonth = useCallback((year: number, month: number, startOfWeek: number = START_OF_WEEK) => {
+  const firstDayOfMonth = new Date(year, month, 1);
+    const startOfFirstWeek = getStartOfWeek(firstDayOfMonth, startOfWeek);
+    
+    const weeks = [];
+    let weekStart = new Date(startOfFirstWeek);
+    let weekIndex = 0;
+    
+    // Lặp cho đến khi vượt quá tháng hiện tại
+    while (weekStart <= new Date(year, month + 1, 0)) {
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      
+      // Format label: "Week X: day D1 [M1] - day D2 [M2]"
+      const startDay = weekStart.getDate();
+      const startMonth = weekStart.getMonth();
+      const endDay = weekEnd.getDate();
+      const endMonth = weekEnd.getMonth();
+      
+      let startLabel = `${startDay}`;
+      let endLabel = `${endDay}`;
+      if (startMonth !== month) startLabel += ` ${monthLabels[startMonth]}`;
+      if (endMonth !== month) endLabel += ` ${monthLabels[endMonth]}`;
+      if (startMonth === endMonth && startMonth !== month) {
+        // Cả tuần nằm ở tháng khác (vd cuối tháng trước hoặc đầu tháng sau)
+        startLabel = `${startDay} ${monthLabels[startMonth]}`;
+        endLabel = `${endDay} ${monthLabels[endMonth]}`;
+      }
+      
+      const label = `Week ${weekIndex + 1}: ${startLabel} - ${endLabel}`;
+      
+      weeks.push({
+        index: weekIndex,
+        label,
+        startDate: new Date(weekStart),
+        endDate: weekEnd,
+      });
+      
+      weekStart.setDate(weekStart.getDate() + 7);
+      weekIndex++;
+    }
+    
+    return weeks;
+  }, [getStartOfWeek]);
+
+  const getTotalWeeksInMonth = useCallback((year: number, month: number, startOfWeek: number = START_OF_WEEK): number => {
+    const lastDayOfMonth = new Date(year, month + 1, 0);
+    const weekIndexOfLastDay = getWeekIndexOfMonth(lastDayOfMonth, startOfWeek);
+    return weekIndexOfLastDay + 1;
+  }, [getWeekIndexOfMonth]);
+
   const overviewSummary = useMemo(() => {
     const formatMonthYear = (date: Date) => `${monthLabels[date.getMonth()]} ${date.getFullYear()}`;
 
-    const monthStart = new Date(overviewMonthAnchor.getFullYear(), overviewMonthAnchor.getMonth(), 1);
-    const monthEnd = new Date(overviewMonthAnchor.getFullYear(), overviewMonthAnchor.getMonth() + 1, 0);
+    let periodStart: Date;
+    let periodEnd: Date;
+    let label: string;
 
-    const weekStart = new Date(
-      overviewMonthAnchor.getFullYear(),
-      overviewMonthAnchor.getMonth(),
-      1 + appliedWeekIndex * 7,
-    );
-    const weekEnd = new Date(
-      overviewMonthAnchor.getFullYear(),
-      overviewMonthAnchor.getMonth(),
-      Math.min(
-        7 + appliedWeekIndex * 7,
-        new Date(overviewMonthAnchor.getFullYear(), overviewMonthAnchor.getMonth() + 1, 0).getDate(),
-      ),
-    );
+    // 1. Xác định khoảng thời gian (Period) dựa trên rangeTab
+    if (rangeTab === 'week') {
+      const { start, end } = getWeekRangeInMonth(
+        overviewMonthAnchor.getFullYear(),
+        overviewMonthAnchor.getMonth(),
+        appliedWeekIndex,
+        START_OF_WEEK
+      );
+      periodStart = start;
+      periodEnd = end;
+      label = `Week ${appliedWeekIndex + 1}: ${start.getDate()} ${monthLabels[start.getMonth()]} - ${end.getDate()} ${monthLabels[end.getMonth()]}`;
+    } else if (rangeTab === 'year') {
+      periodStart = new Date(overviewYearAnchor, 0, 1);
+      periodEnd = new Date(overviewYearAnchor, 11, 31, 23, 59, 59); // Cuối ngày của năm
+      label = `Year ${overviewYearAnchor}`;
+    } else {
+      // Mặc định là 'month'
+      periodStart = new Date(overviewMonthAnchor.getFullYear(), overviewMonthAnchor.getMonth(), 1);
+      periodEnd = new Date(overviewMonthAnchor.getFullYear(), overviewMonthAnchor.getMonth() + 1, 0, 23, 59, 59);
+      label = formatMonthYear(overviewMonthAnchor);
+    }
 
-    const yearStart = new Date(overviewYearAnchor, 0, 1);
-    const yearEnd = new Date(overviewYearAnchor, 11, 31);
+    // 2. Lọc và Tính toán (Chỉ lặp qua mảng 1 lần để tối ưu hiệu năng)
+    let expense = 0;
+    let income = 0;
 
-    const [periodStart, periodEnd, label] = rangeTab === 'week'
-      ? [weekStart, weekEnd, `Week ${appliedWeekIndex + 1}: day ${weekStart.getDate()} - day ${weekEnd.getDate()}`]
-      : rangeTab === 'year'
-        ? [yearStart, yearEnd, `Year ${overviewYearAnchor}`]
-        : [monthStart, monthEnd, formatMonthYear(overviewMonthAnchor)];
-
-    const inPeriod = overviewTransactions.filter((item) => item.date >= periodStart && item.date <= periodEnd);
-    const expense = inPeriod.reduce((sum, item) => sum + (item.amount < 0 ? Math.abs(item.amount) : 0), 0);
-    const income = inPeriod.reduce((sum, item) => sum + (item.amount > 0 ? item.amount : 0), 0);
+    overviewTransactionsAnalysis.forEach((item) => {
+      const itemDate = new Date(item.date[0], item.date[1] - 1, item.date[2]); // Chuyển từ [year, month, day] sang Date
+      if (itemDate >= periodStart && itemDate <= periodEnd) {
+        const amountNum = parseFloat(item.amount);
+        if (amountNum < 0) {
+          expense += Math.abs(amountNum);
+        } else {
+          income += amountNum;
+        }
+      }
+    });
 
     return {
       label,
       expense,
       income,
     };
-  }, [appliedWeekIndex, overviewMonthAnchor, overviewYearAnchor, rangeTab]);
+    // Thêm overviewTransactions vào dependencies
+  }, [appliedWeekIndex, overviewMonthAnchor, overviewYearAnchor, rangeTab, overviewTransactionsAnalysis, getWeekRangeInMonth]);
+
+  useEffect( () => {
+    console.log("\n\n\nOVERVIEW SUMMARY: " + overviewSummary.expense);
+  }, [overviewSummary]);
 
   const openRangePicker = () => {
     setDraftRangeTab(rangeTab);
@@ -277,6 +381,17 @@ export function AnalyticsScreen({ onAddTransaction, onTransactionPress }: Analyt
     setDraftOverviewYearWindowStart(overviewYearWindowStart);
     setDraftWeekIndex(appliedWeekIndex);
     setShowRangePicker(true);
+
+    // Đảm bảo draftWeekIndex nằm trong khoảng tuần thực tế của tháng hiện tại
+    const weeks = getWeekRangesInMonth(
+      draftOverviewMonthAnchor.getFullYear(),
+      draftOverviewMonthAnchor.getMonth(),
+      START_OF_WEEK
+    );
+    if (draftWeekIndex >= weeks.length) {
+      setDraftWeekIndex(0);
+    }
+
   };
 
   const handleRangePickerApply = () => {
@@ -290,14 +405,33 @@ export function AnalyticsScreen({ onAddTransaction, onTransactionPress }: Analyt
 
   const handleRangePickerReset = () => {
     setDraftRangeTab('month');
-    setDraftOverviewMonthAnchor(new Date(2025, 1, 1));
-    setDraftOverviewYearAnchor(2025);
-    setDraftOverviewYearWindowStart(2024);
+    setDraftOverviewMonthAnchor(new Date());
+    setDraftOverviewYearAnchor(new Date().getFullYear());
+    setDraftOverviewYearWindowStart(new Date().getFullYear() - 1);
   };
 
   const shiftDraftPeriod = (direction: -1 | 1) => {
     if (draftRangeTab === 'week') {
-      setDraftOverviewMonthAnchor((current) => new Date(current.getFullYear(), current.getMonth() + direction, 1));
+      // Chuyển tháng
+      const newMonthAnchor = new Date(
+        draftOverviewMonthAnchor.getFullYear(),
+        draftOverviewMonthAnchor.getMonth() + direction,
+        1
+      );
+      setDraftOverviewMonthAnchor(newMonthAnchor);
+      
+      // Tính lại số tuần của tháng mới và điều chỉnh draftWeekIndex nếu cần
+      const weeksInNewMonth = getWeekRangesInMonth(
+        newMonthAnchor.getFullYear(),
+        newMonthAnchor.getMonth(),
+        START_OF_WEEK
+      );
+      let newWeekIndex = draftWeekIndex;
+      if (newWeekIndex >= weeksInNewMonth.length) {
+        newWeekIndex = weeksInNewMonth.length - 1;
+      }
+      if (newWeekIndex < 0) newWeekIndex = 0;
+      setDraftWeekIndex(newWeekIndex);
       return;
     }
 
@@ -306,6 +440,7 @@ export function AnalyticsScreen({ onAddTransaction, onTransactionPress }: Analyt
       return;
     }
 
+    // Year tab
     const newWindowStart = draftOverviewYearWindowStart + direction;
     setDraftOverviewYearWindowStart(newWindowStart);
     setDraftOverviewYearAnchor(newWindowStart + 1);
@@ -316,122 +451,146 @@ export function AnalyticsScreen({ onAddTransaction, onTransactionPress }: Analyt
       let newWeekIndex = appliedWeekIndex + direction;
       let newMonthAnchor = new Date(overviewMonthAnchor);
 
+      const totalWeeksInCurrentMonth = getTotalWeeksInMonth(
+        newMonthAnchor.getFullYear(),
+        newMonthAnchor.getMonth(),
+        START_OF_WEEK
+      );
+
       if (newWeekIndex < 0) {
+        // Lùi về tháng trước, lấy tuần cuối cùng của tháng đó
         newMonthAnchor = new Date(overviewMonthAnchor.getFullYear(), overviewMonthAnchor.getMonth() - 1, 1);
-        const daysInPrevMonth = new Date(newMonthAnchor.getFullYear(), newMonthAnchor.getMonth() + 1, 0).getDate();
-        newWeekIndex = Math.floor((daysInPrevMonth - 1) / 7); 
-      } else {
-        const daysInCurrentMonth = new Date(overviewMonthAnchor.getFullYear(), overviewMonthAnchor.getMonth() + 1, 0).getDate();
-        const maxWeekIndex = Math.floor((daysInCurrentMonth - 1) / 7);
-        if (newWeekIndex > maxWeekIndex) {
-          newMonthAnchor = new Date(overviewMonthAnchor.getFullYear(), overviewMonthAnchor.getMonth() + 1, 1);
-          newWeekIndex = 0;
-        }
+        newWeekIndex = getTotalWeeksInMonth(
+          newMonthAnchor.getFullYear(),
+          newMonthAnchor.getMonth(),
+          START_OF_WEEK
+        ) - 1;
+      } else if (newWeekIndex >= totalWeeksInCurrentMonth) {
+        // Tiến sang tháng sau, lấy tuần đầu tiên
+        newMonthAnchor = new Date(overviewMonthAnchor.getFullYear(), overviewMonthAnchor.getMonth() + 1, 1);
+        newWeekIndex = 0;
       }
+
       setOverviewMonthAnchor(newMonthAnchor);
       setAppliedWeekIndex(newWeekIndex);
-    } else if (rangeTab === 'year') {
+    } 
+    else if (rangeTab === 'year') {
       setOverviewYearAnchor((y) => y + direction);
       setOverviewYearWindowStart((y) => y + direction);
-    } else {
+    } 
+    else {
+      // rangeTab === 'month'
       setOverviewMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() + direction, 1));
     }
   };
 
   const chartData = useMemo(() => {
-    const toAverageTotal = (items: Array<{ date: Date; amount: number }>) => {
-      const expense = items.reduce(
-        (sum, item) => sum + (item.amount < 0 ? Math.abs(item.amount) : 0),
-        0
-      );
-
-      const income = items.reduce(
-        (sum, item) => sum + (item.amount > 0 ? item.amount : 0),
-        0
-      );
-
-      return overviewActiveMetric === 'income' ? income : expense;
-    };
-
-    const addMonths = (date: Date, offset: number) => new Date(date.getFullYear(), date.getMonth() + offset, 1);
-    const formatMonthYear = (date: Date) => {
-      const month = monthLabels[date.getMonth()];
-      return `${month} ${date.getFullYear()}`;
-    };
-
-    const weekStart = new Date(overviewMonthAnchor.getFullYear(), overviewMonthAnchor.getMonth(), 1 + appliedWeekIndex * 7);
-    const weekEnd = new Date(overviewMonthAnchor.getFullYear(), overviewMonthAnchor.getMonth(), Math.min(7 + appliedWeekIndex * 7, new Date(overviewMonthAnchor.getFullYear(), overviewMonthAnchor.getMonth() + 1, 0).getDate()));
-
-    const week = weekdayLabels.map((label, index) => {
-      const dayOfWeek = index === 6 ? 0 : index + 1;
-      const entries = overviewTransactions.filter(
-        (item) =>
-          item.date >= weekStart &&
-          item.date <= weekEnd &&
-          item.date.getDay() === dayOfWeek,
-      );
-
-      return {
-        label,
-        amount: toAverageTotal((entries)),
+    // Helper tính tổng chi hoặc thu dựa trên overviewActiveMetric
+    const toAverageTotal = (items: { date: Date; amount: number }[]) => {
+      if (items.length === 0){ return 0;}
+        const expense = items.reduce(
+          (sum, item) => sum + (item.amount < 0 ? Math.abs(item.amount) : 0),
+          0
+        );
+        const income = items.reduce(
+          (sum, item) => sum + (item.amount > 0 ? item.amount : 0),
+          0
+        );
+        return overviewActiveMetric === 'income' ? income : expense;
       };
-    });
 
-    const month = [-1, 0, 1].map((offset) => {
-      const monthDate = addMonths(overviewMonthAnchor, offset);
-      const entries = overviewTransactions.filter(
-        (item) =>
-          item.date.getFullYear() === monthDate.getFullYear() &&
-          item.date.getMonth() === monthDate.getMonth(),
-      );
+      const addMonths = (date: Date, offset: number) =>
+        new Date(date.getFullYear(), date.getMonth() + offset, 1);
+
+      const formatMonthYear = (date: Date) =>
+        `${monthLabels[date.getMonth()]} ${date.getFullYear()}`;
+
+      // ---------- TAB WEEK ----------
+      if (rangeTab === 'week') {
+        // Lấy đầu và cuối tuần đúng dựa trên appliedWeekIndex và START_OF_WEEK
+        const { start: weekStart, end: weekEnd } = getWeekRangeInMonth(
+          overviewMonthAnchor.getFullYear(),
+          overviewMonthAnchor.getMonth(),
+          appliedWeekIndex,
+          START_OF_WEEK
+        );
+
+        // Sắp xếp nhãn các ngày trong tuần bắt đầu từ START_OF_WEEK (Thứ Hai)
+        const orderedWeekdays = () => {
+          const labels = [...weekdayLabels]; // ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+          const startIndex = START_OF_WEEK === 1 ? 0 : 6; // Monday → 0, Sunday → 6
+          return [...labels.slice(startIndex), ...labels.slice(0, startIndex)];
+        };
+        const dayLabels = orderedWeekdays();
+
+        const weekData = dayLabels.map((label, idx) => {
+          // currentDay: giá trị getDay() tương ứng (0=CN, 1=T2, ..., 6=T7)
+          const currentDay = (START_OF_WEEK + idx) % 7;
+          const entries = overviewTransactionsAnalysis.filter((item) => {
+            const itemDate = new Date(item.date[0], item.date[1] - 1, item.date[2]);
+            return itemDate >= weekStart && itemDate <= weekEnd && itemDate.getDay() === currentDay;
+          });
+          return {
+            label,
+            amount: toAverageTotal(entries.map(e => ({ date: new Date(e.date[0], e.date[1] - 1, e.date[2]), amount: Number(e.amount) }))),
+          };
+        });
+
+        return {
+          title: 'Weekly Expenses',
+          subtitle: `Week ${appliedWeekIndex + 1}, ${formatMonthYear(overviewMonthAnchor)}`,
+          data: weekData,
+        };
+      }
+
+      // ---------- TAB YEAR (cửa sổ 3 năm) ----------
+      if (rangeTab === 'year') {
+        const yearlyData = Array.from({ length: 3 }, (_, index) => {
+          const yearValue = overviewYearWindowStart + index;
+          const filteredItems = overviewTransactionsAnalysis.filter((item) => item.date[0] === yearValue);
+          return {
+            label: `${yearValue}`,
+            amount: toAverageTotal(
+              filteredItems.map(e => ({ date: new Date(e.date[0], e.date[1] - 1, e.date[2]), amount: Number(e.amount) }))
+            ),
+          };
+        });
+        return {
+          title: 'Yearly Expenses',
+          subtitle: `${overviewYearWindowStart} - ${overviewYearWindowStart + 2}`,
+          data: yearlyData,
+        };
+      }
+
+      // ---------- TAB MONTH (mặc định, hiển thị 3 tháng: trước, hiện tại, sau) ----------
+      const monthData = [-1, 0, 1].map((offset) => {
+        const monthDate = addMonths(overviewMonthAnchor, offset);
+        const entries = overviewTransactionsAnalysis.filter(
+          (item) =>
+            item.date[0] === monthDate.getFullYear() &&
+            item.date[1] - 1 === monthDate.getMonth()
+        );
+
+        return {
+          label: formatMonthYear(monthDate),
+          amount: toAverageTotal(entries.map(e => ({ date: new Date(e.date[0], e.date[1] - 1, e.date[2]), amount: Number(e.amount) }))),
+        };
+      });
 
       return {
-        label: formatMonthYear(monthDate),
-        amount: toAverageTotal(entries),
-      };
-    });
-
-    const yearly = Array.from({ length: 3 }, (_, index) => {
-      const yearValue = overviewYearWindowStart + index;
-      return {
-        label: `${yearValue}`,
-        amount: toAverageTotal(overviewTransactions.filter((item) => item.date.getFullYear() === yearValue)),
-      };
-    });
-
-    const year = monthLabels.map((label, monthIndex) => {
-      const entries = overviewTransactions.filter(
-        (item) => item.date.getFullYear() === overviewYearAnchor && item.date.getMonth() === monthIndex,
-      );
-
-      return {
-        label,
-        amount: toAverageTotal(entries),
-      };
-    });
-
-    if (rangeTab === 'week') {
-      return {
-        title: 'Weekly Expenses',
+        title: 'Monthly Expenses',
         subtitle: formatMonthYear(overviewMonthAnchor),
-        data: week,
+        data: monthData,
       };
-    }
-
-    if (rangeTab === 'year') {
-      return {
-        title: 'Yearly Expenses',
-        subtitle: `${overviewYearWindowStart} - ${overviewYearWindowStart + 2}`,
-        data: yearly,
-      };
-    }
-
-    return {
-      title: 'Monthly Expenses',
-      subtitle: formatMonthYear(overviewMonthAnchor),
-      data: month,
-    };
-  }, [appliedWeekIndex, overviewMonthAnchor, overviewYearAnchor, overviewYearWindowStart, rangeTab, overviewActiveMetric]);
+    }, [
+      appliedWeekIndex,
+      overviewMonthAnchor,
+      overviewYearWindowStart,
+      rangeTab,
+      overviewActiveMetric,
+      getWeekRangeInMonth,
+      overviewTransactionsAnalysis,
+    ]);
 
   const maxChartValue = Math.max(...chartData.data.map((item) => item.amount), 1);
   const chartTopLabels = useMemo(
@@ -462,12 +621,24 @@ export function AnalyticsScreen({ onAddTransaction, onTransactionPress }: Analyt
     <ScrollView style={[styles.container, { backgroundColor: colors.bg }]} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={[styles.headerCard, { backgroundColor: colors.headerCard }]}>
         <View>
-          <Text style={[styles.headerEyebrow, { color: colors.textMuted }]}>April 2026</Text>
+          <Text style={[styles.headerEyebrow, { color: colors.textMuted }]}>{(() => {
+            const date = new Date();
+            const formatted = date.toLocaleDateString('en-US', {
+              month: 'long',
+              year: 'numeric'
+            });
+            return formatted; 
+          })()}</Text>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Analytics</Text>
         </View>
-        <View style={styles.monthChangePill}>
-          <Ionicons name="trending-down-outline" size={16} color="#16a34a" />
-          <Text style={styles.monthChangeText}>-4.1% vs last month</Text>
+        <View style={(monthlyAnalysis?.percentage_transaction_against_last_month ?? 0) < 0 ? styles.monthChangePillDown : styles.monthChangePillUp}>
+          <Ionicons 
+            name={(monthlyAnalysis?.percentage_transaction_against_last_month ?? 0) < 0 ? "trending-down-outline" : "trending-up-outline"} 
+            size={16} 
+            color={(monthlyAnalysis?.percentage_transaction_against_last_month ?? 0) < 0 ? "#16a34a" : "#ff1313"} />
+          <Text 
+            style={(monthlyAnalysis?.percentage_transaction_against_last_month ?? 0) < 0 ? styles.monthChangeTextDown : styles.monthChangeTextUp}
+          >{monthlyAnalysis?.percentage_transaction_against_last_month}% vs last month</Text>
         </View>
       </View>
 
@@ -479,29 +650,65 @@ export function AnalyticsScreen({ onAddTransaction, onTransactionPress }: Analyt
 
       {activeTab === 'expenses' ? (
         <View style={styles.expensesView}>
+          {/* EXPENSE - SUMMARY */}
           <View style={styles.summaryGrid}>
             <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
               <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>Total Spent</Text>
-              <Text style={[styles.summaryValue, { color: colors.text }]}>{fmtVND(totalSpent)}</Text>
+              <Text style={[styles.summaryValue, { color: colors.text }]}>{fmtVND(monthlyAnalysis?.total_expense || 0)}</Text>
               <View style={styles.summaryTrendRow}>
-                <Ionicons name="trending-down-outline" size={14} color="#16a34a" />
-                <Text style={styles.summaryTrendPositive}>31,000 VND less</Text>
+                {(monthlyAnalysis?.balance ?? 0) < 0 ? (
+                  <>
+                    <View style={styles.summaryTrendRow}>
+                      <Ionicons
+                        name="warning-outline"
+                        size={14}
+                        color="#dc2626"
+                      />
+
+                      <Text style={styles.summaryTrendNegative}>
+                        Overspent {fmtVND(Math.abs(monthlyAnalysis?.balance || 0))}
+                      </Text>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.summaryTrendRow}>
+                      <Ionicons
+                        name="wallet-outline"
+                        size={14}
+                        color="#16a34a"
+                      />
+
+                      <Text style={styles.summaryTrendPositive}>
+                        Remaining {fmtVND(monthlyAnalysis?.balance || 0)}
+                      </Text>
+                    </View>
+                  </>
+                )}
               </View>
             </View>
             <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
               <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>Transactions</Text>
-              <Text style={[styles.summaryValue, { color: colors.text }]}>4 items</Text>
+              <Text style={[styles.summaryValue, { color: colors.text }]}>{monthlyAnalysis?.number_of_expense_image} items</Text>
               <View style={styles.summaryTrendRow}>
-                <Ionicons name="trending-up-outline" size={14} color="#f97316" />
-                <Text style={styles.summaryTrendOrange}>+0 photo</Text>
+                <Ionicons 
+                  name={(monthlyAnalysis?.number_image_against_last_month ?? 0) > 0 ? "trending-up-outline" : "trending-down-outline"} 
+                  size={14} 
+                  color={(monthlyAnalysis?.number_image_against_last_month ?? 0) > 0 ? "#f97316" : "#16a34a"} 
+                />
+                <Text 
+                  style={(monthlyAnalysis?.number_image_against_last_month ?? 0) > 0 ? styles.summaryTrendUp : styles.summaryTrendDown}>
+                  {`${monthlyAnalysis?.number_image_against_last_month}`} photo
+                </Text>
               </View>
             </View>
           </View>
 
+          {/* EXPENSE - CIRCLE CHART */}
           <View style={[styles.panelCard, { backgroundColor: colors.card }]}>
             <View style={styles.panelHeaderRow}>
               <Text style={[styles.panelTitle, { color: colors.text }]}>Spending by Category</Text>
-              <Text style={[styles.panelTotal, { color: colors.textSecondary }]}>{fmtVND(totalSpent)} total</Text>
+              <Text style={[styles.panelTotal, { color: colors.textMuted }]}></Text>
             </View>
 
             <View style={styles.categoryGrid}>
@@ -524,7 +731,7 @@ export function AnalyticsScreen({ onAddTransaction, onTransactionPress }: Analyt
                             cx="80"
                             cy="80"
                             r={radius}
-                            stroke={item.color}
+                            stroke={item.category_color}
                             strokeWidth={strokeWidth}
                             fill="transparent"
                             strokeDasharray={`${strokeLength} ${circumference}`}
@@ -538,15 +745,15 @@ export function AnalyticsScreen({ onAddTransaction, onTransactionPress }: Analyt
               </View>
 
               <View style={styles.categoryList}>
-                {(showAllCategories ? totalExpensePercentages : totalExpensePercentages.slice(0, 3)).map((item) => (
-                  <View key={item.name} style={styles.categoryItem}>
+                {(showAllCategories ? totalExpensePercentages : totalExpensePercentages.slice(0, 3)).map((item, index) => (
+                  <View key={index} style={styles.categoryItem}>
                     <View style={styles.categoryLineRow}>
-                      <View style={[styles.categoryDot, { backgroundColor: item.color }]} />
-                      <Text style={[styles.categoryName, { color: colors.text }]}>{item.name}</Text>
+                      <View style={[styles.categoryDot, { backgroundColor: item.category_color }]} />
+                      <Text style={[styles.categoryName, { color: colors.text }]}>{item.category_name}</Text>
                       <Text style={[styles.categoryPercent, { color: colors.textSecondary }]}>{item.percentage.toFixed(1)}%</Text>
                     </View>
                     <View style={[styles.categoryTrack, { backgroundColor: colors.border }]}>
-                      <View style={[styles.categoryFill, { width: `${item.percentage}%`, backgroundColor: item.color }]} />
+                      <View style={[styles.categoryFill, { width: `${item.percentage}%`, backgroundColor: item.category_color }]} />
                     </View>
                   </View>
                 ))}
@@ -563,32 +770,44 @@ export function AnalyticsScreen({ onAddTransaction, onTransactionPress }: Analyt
               </View>
             </View>
           </View>
-
+          
+          {/* EXPENSE - GROUP EXPENSE TRANSACTIONS */}
           <Text style={[styles.sectionHeading, { color: colors.sectionHeading }]}>All Transactions</Text>
           <View style={styles.transactionsList}>
-            {groupedExpenseTransactions.map((g) => (
-              <View key={g.date} style={styles.groupSection}>
-                <Text style={[styles.groupDate, { color: colors.groupDate }]}>{g.date}</Text>
+            {groupedExpenseTransactions.map((g, index) => (
+              <View key={index} style={styles.groupSection}>
+                <Text style={[styles.groupDate, { color: colors.groupDate }]}>
+                  {(() => {
+                    const date = new Date(g.date);
+
+                    const formatted = date.toLocaleDateString("en-GB", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    });
+
+                    return formatted.replace(/ (\d{4})$/, ", $1");
+                  })()}
+                </Text>
                 <View style={styles.groupItemsWrap}>
-                  {g.items.map((tx) => {
-                    const categoryMeta = getAnalyticsCategoryMeta(tx.category);
+                  {g.items.map((tx, index) => {
                     return (
-                      <Pressable key={tx.id} onPress={() => onTransactionPress?.(tx)} style={[styles.transactionCard, { backgroundColor: colors.transactionCard }]}>
-                        <View style={[styles.transactionIcon, { backgroundColor: categoryMeta.bgColor }]}>
-                          <Ionicons name={categoryMeta.icon as any} size={22} color={categoryMeta.color} />
+                      <Pressable key={index} onPress={() => onTransactionPress?.(tx)} style={[styles.transactionCard, { backgroundColor: colors.transactionCard }]}>
+                        <View style={[styles.transactionIcon, { backgroundColor: tx.category_bg_color || '#ecfdf5'}]}>
+                          <Ionicons name={tx.category_icon as any || 'wallet-outline'} size={22} color={tx.category_color || '#22c55e'} />
                         </View>
                         <View style={styles.transactionInfo}>
-                          <Text style={[styles.transactionTitle, { color: colors.text }]}>{tx.title}</Text>
-                          <Text style={[styles.transactionMeta, { color: colors.textMuted }]}>{tx.date} · {tx.time}</Text>
+                          <Text style={[styles.transactionTitle, { color: colors.text }]}>{tx.note}</Text>
+                          <Text style={[styles.transactionMeta, { color: colors.textMuted }]}>{tx.date} </Text>
                         </View>
                         <View style={styles.transactionAmountWrap}>
                           <Text style={[
                             styles.transactionAmount,
-                            tx.amount > 0 ? styles.transactionIncomeAmount : styles.transactionExpenseAmount,
+                            tx.type === 'Income' ? styles.transactionIncomeAmount : styles.transactionExpenseAmount,
                           ]}>
-                            {tx.amount > 0 ? '+' : '-'}{fmtVND(tx.amount)}
+                            {tx.type === 'Income' ? '+' : '-'}{fmtVND(tx.amount)}
                           </Text>
-                          <Text style={[styles.transactionCategory, { color: colors.textMuted }]}>{categoryMeta.label}</Text>
+                          <Text style={[styles.transactionCategory, { color: colors.textMuted }]}>{tx.category_name}</Text>
                         </View>
                       </Pressable>
                     );
@@ -605,12 +824,14 @@ export function AnalyticsScreen({ onAddTransaction, onTransactionPress }: Analyt
           <View style={styles.calendarCard}>
             <View style={styles.calendarToolbarRow}>
               <View style={styles.calendarMonthPicker}>
+                {/* BACK MONTH PRESS BUTTON */}
                 <Pressable style={styles.calendarMonthNavButton} onPress={() => shiftCalendarMonth(-1)}>
                   <Ionicons name="chevron-back" size={18} color="#64748b" />
                 </Pressable>
                 <Text style={styles.calendarMonth}>
                   {monthLabels[calendarMonthDate.getMonth()]} {calendarMonthDate.getFullYear()}
                 </Text>
+                {/* NEXT MONTH PRESS BUTTON */}
                 <Pressable style={styles.calendarMonthNavButton} onPress={() => shiftCalendarMonth(1)}>
                   <Ionicons name="chevron-forward" size={18} color="#64748b" />
                 </Pressable>
@@ -618,8 +839,8 @@ export function AnalyticsScreen({ onAddTransaction, onTransactionPress }: Analyt
             </View>
 
             <View style={styles.weekdayRow}>
-              {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day) => (
-                <Text key={day} style={styles.weekdayText}>{day}</Text>
+              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => (
+                <Text key={index} style={styles.weekdayText}>{day}</Text>
               ))}
             </View>
 
@@ -634,7 +855,7 @@ export function AnalyticsScreen({ onAddTransaction, onTransactionPress }: Analyt
                 const hasAmount = item.hasTransactions;
                 return (
                   <Pressable
-                    key={item.day}
+                    key={idx}
                     style={styles.calendarCell}
                     onPress={() => setSelectedCalendarDay(item.day)}
                   >
@@ -666,11 +887,7 @@ export function AnalyticsScreen({ onAddTransaction, onTransactionPress }: Analyt
 
             <View style={styles.netMonthDivider} />
             <View style={styles.netMonthRow}>
-              <Text style={styles.netMonthLabel}>Net this month</Text>
-              <Text style={[styles.netMonthValue, netThisMonth >= 0 ? styles.calendarIncomeText : styles.calendarExpenseText]}>
-                {netThisMonth >= 0 ? '+' : '-'}{fmtVND(netThisMonth)}
-              </Text>
-            </View>
+              </View>
 
             <View style={styles.selectedDaySection}>
               <View style={styles.selectedDayHeader}>
@@ -689,7 +906,7 @@ export function AnalyticsScreen({ onAddTransaction, onTransactionPress }: Analyt
               <View style={styles.selectedDayList}>
                 {selectedDayData.transactions.length > 0 ? (
                   selectedDayData.transactions.map((tx) => {
-                    const categoryMeta = getAnalyticsCategoryMeta(tx.category);
+                    const categoryMeta = getAnalyticsCategoryMeta(tx.category.toString());
                     const isIncome = tx.amount > 0;
                     return (
                       <Pressable key={tx.id} onPress={() => onTransactionPress?.(tx)} style={styles.selectedDayItem}>
@@ -783,8 +1000,8 @@ export function AnalyticsScreen({ onAddTransaction, onTransactionPress }: Analyt
 
               <View style={styles.barChartWrap}>
                 <View style={styles.yAxisLabels}>
-                  {chartTopLabels.map((label) => (
-                    <Text key={label} style={[styles.yAxisLabel, { color: colors.chartLabelText }]}>{label}</Text>
+                  {chartTopLabels.map((label, idx) => (
+                    <Text key={idx} style={[styles.yAxisLabel, { color: colors.chartLabelText }]}>{label}</Text>
                   ))}
                 </View>
                 <View style={styles.barChartArea}>
@@ -849,22 +1066,27 @@ export function AnalyticsScreen({ onAddTransaction, onTransactionPress }: Analyt
 
                   {draftRangeTab === 'week' ? (
                     <View style={styles.rangeModalList}>
-                      {[
-                        'Week 1: day 27 - day 2',
-                        'Week 2: day 3 - day 9',
-                        'Week 3: day 10 - day 16',
-                        'Week 4: day 17 - day 23',
-                        'Week 5: day 24 - day 2',
-                      ].map((item, idx) => {
-                        const selected = idx === draftWeekIndex;
-                        return (
-                          <Pressable key={item} onPress={() => setDraftWeekIndex(idx)} style={[styles.rangeModalWeekItem, selected && styles.rangeModalWeekItemActive]}>
-                            <Text style={[styles.rangeModalListItem, selected && styles.rangeModalListItemActive]}>
-                              <Text style={styles.rangeModalListItemBold}>{item.split(':')[0]}:</Text> {item.split(':')[1].trim()}
-                            </Text>
-                          </Pressable>
+                      {(() => {
+                        const weeks = getWeekRangesInMonth(
+                          draftOverviewMonthAnchor.getFullYear(),
+                          draftOverviewMonthAnchor.getMonth(),
+                          START_OF_WEEK
                         );
-                      })}
+                        return weeks.map((week: any) => {
+                          const selected = week.index === draftWeekIndex;
+                          return (
+                            <Pressable
+                              key={week.index}
+                              onPress={() => setDraftWeekIndex(week.index)}
+                              style={[styles.rangeModalWeekItem, selected && styles.rangeModalWeekItemActive]}
+                            >
+                              <Text style={[styles.rangeModalListItem, selected && styles.rangeModalListItemActive]}>
+                                {week.label}
+                              </Text>
+                            </Pressable>
+                          );
+                        });
+                      })()}
                     </View>
                   ) : draftRangeTab === 'month' ? (
                     <View style={styles.rangeModalMonthGrid}>
@@ -956,7 +1178,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#1e293b',
   },
-  monthChangePill: {
+  monthChangePillDown: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -968,10 +1190,27 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     marginTop: 10,
   },
-  monthChangeText: {
+  monthChangePillUp: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#ff1313',
+    backgroundColor: '#fae1df',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
+    marginTop: 10,
+  },
+  monthChangeTextDown: {
     fontSize: 12,
     fontWeight: '700',
     color: '#0f8f2a',
+  },
+  monthChangeTextUp: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#ff1313',
   },
   tabsRow: {
     flexDirection: 'row',
@@ -1043,14 +1282,28 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   summaryTrendPositive: {
+    flex: 1,
     fontSize: 12,
+    flexShrink: 1,
     fontWeight: '700',
     color: '#16a34a',
   },
-  summaryTrendOrange: {
+  summaryTrendNegative: {
+    flex: 1,
+    fontSize: 12,
+    flexShrink: 1,
+    fontWeight: '700',
+    color: '#dc2626',
+  },
+  summaryTrendUp: {
     fontSize: 12,
     fontWeight: '700',
     color: '#f97316',
+  },
+  summaryTrendDown: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#16a34a',
   },
   panelCard: {
     backgroundColor: '#ffffff',

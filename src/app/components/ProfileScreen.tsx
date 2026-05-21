@@ -1,17 +1,17 @@
+import { useAnalysis } from '@/src/context/analysisContext';
+import { useAuth } from '@/src/context/authContext';
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
   Switch,
   Text,
   View,
-  Image,
 } from 'react-native';
 import { useColors, useTheme } from '../../context/ThemeContext';
-
-const TOTAL_SPENT = 719_000;
 
 const fmtVND = (v: number) => `${new Intl.NumberFormat('vi-VN').format(v)} VND`;
 
@@ -75,6 +75,31 @@ export function ProfileScreen({
 }) {
   const { isDark, setDark } = useTheme();
   const colors = useColors();
+  const {userProfile, fetchUserProfile} = useAuth();
+  const { monthlyAnalysis} = useAnalysis();
+
+  const TOTAL_BUDGET = useMemo(() => monthlyAnalysis?.total_income || 0, [monthlyAnalysis]);   // static thì dependency rỗng
+  
+  const TOTAL_SPENT = useMemo(() => {
+      return monthlyAnalysis?.total_expense || 0;
+  }, [monthlyAnalysis]); 
+
+  const REMAINING = useMemo(() => {
+      return TOTAL_BUDGET - TOTAL_SPENT <= 0 ? 0 : TOTAL_BUDGET - Math.abs(TOTAL_SPENT);
+  }, [TOTAL_BUDGET, TOTAL_SPENT]);
+
+  const REMAINING_PCT = useMemo(() => {
+      if (TOTAL_BUDGET === 0) return 0;
+      return Math.round((REMAINING / TOTAL_BUDGET) * 100) <= 0 ? 0 : Math.round((REMAINING / TOTAL_BUDGET) * 100);
+  }, [REMAINING, TOTAL_BUDGET]);
+
+  const USER_PROFILE = useMemo(() => {
+    return userProfile
+  }, [userProfile]);
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
 
   const remaining = totalBudget - TOTAL_SPENT;
   const remainingPct = Math.max(0, Math.min(100, Math.round((remaining / totalBudget) * 100)));
@@ -103,11 +128,11 @@ export function ProfileScreen({
             <View style={styles.onlineDot} />
           </View>
           <View style={styles.userInfo}>
-            <Text style={[styles.userName, { color: colors.text }]}>Ngan Tran</Text>
-            <Text style={[styles.userEmail, { color: colors.textSecondary }]}>ngan.tran@email.com</Text>
+            <Text style={[styles.userName, { color: colors.text }]}>{USER_PROFILE?.username}</Text>
+            <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{USER_PROFILE?.email}</Text>
             <View style={styles.proBadge}>
               <Ionicons name="star" size={11} color="#1C4D8D" />
-              <Text style={styles.proBadgeText}>Pro Member</Text>
+              <Text style={styles.proBadgeText}>{USER_PROFILE?.role}</Text>
             </View>
           </View>
         </View>
@@ -116,7 +141,7 @@ export function ProfileScreen({
       {/* Stats Row */}
       <View style={[styles.card, styles.statsCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
         <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: colors.text }]}>24</Text>
+          <Text style={[styles.statValue, { color: colors.text }]}>{monthlyAnalysis?.number_of_transactions}</Text>
           <Text style={[styles.statLabel, { color: colors.textMuted }]}>Transactions</Text>
         </View>
         <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
@@ -126,7 +151,7 @@ export function ProfileScreen({
         </View>
         <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
         <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: colors.text }]}>{remainingPct}%</Text>
+          <Text style={[styles.statValue, { color: colors.text }]}>{REMAINING_PCT}%</Text>
           <Text style={[styles.statLabel, { color: colors.textMuted }]}>Budget Left</Text>
         </View>
       </View>
@@ -134,19 +159,22 @@ export function ProfileScreen({
       {/* April Budget */}
       <View style={[styles.card, styles.budgetCard, isDark && { backgroundColor: '#0d2440', borderColor: '#1e3a5f' }]}>
         <View style={styles.budgetHeaderRow}>
-          <Text style={[styles.budgetTitle, { color: colors.text }]}>April Budget</Text>
+          <Text style={[styles.budgetTitle, { color: colors.text }]}>{(() => {
+            const month = new Date().toLocaleString('default', { month: 'long' });
+            return month; // Output: "May"
+          })()} Budget</Text>
           <View style={styles.budgetPill}>
-            <Text style={styles.budgetPillText}>{remainingPct}% left</Text>
+            <Text style={styles.budgetPillText}>{REMAINING_PCT}% left</Text>
           </View>
         </View>
-        <Text style={[styles.budgetSub, { color: colors.textSecondary }]}>{fmtVND(TOTAL_SPENT)} spent of {fmtVND(totalBudget)}</Text>
+        <Text style={[styles.budgetSub, { color: colors.textSecondary }]}>{fmtVND(TOTAL_SPENT)} spent of {fmtVND(TOTAL_BUDGET)}</Text>
         <View style={[styles.progressTrack, isDark && { backgroundColor: '#1e3a5f' }]}>
-          <View style={[styles.progressFill, { width: `${remainingPct}%` }]} />
+          <View style={[styles.progressFill, { width: `${REMAINING_PCT}%` }]} />
         </View>
         <View style={styles.budgetFooterRow}>
           <Text style={[styles.budgetSpent, { color: colors.textSecondary }]}>{fmtVND(TOTAL_SPENT)} spent</Text>
           <Text style={[styles.budgetDot, { color: colors.textMuted }]}>·</Text>
-          <Text style={styles.budgetRemaining}>{fmtVND(remaining)} remaining</Text>
+          <Text style={styles.budgetRemaining}>{fmtVND(REMAINING)} remaining</Text>
         </View>
       </View>
 

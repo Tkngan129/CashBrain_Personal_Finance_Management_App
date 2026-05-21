@@ -1,19 +1,22 @@
-import React, { useState } from 'react';
+import { useAuth } from '@/src/context/authContext';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  StyleSheet,
-  SafeAreaView,
+  ActivityIndicator,
+  Animated,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useColors } from '../../context/ThemeContext';
 
 interface LoginScreenProps {
-  onLogin: () => void;
+  onLogin: (result: boolean) => void;
   onNavigateSignup: () => void;
 }
 
@@ -22,6 +25,45 @@ export function LoginScreen({ onLogin, onNavigateSignup }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loginFailed, setLoginFailed] = useState(false);
+  const shakeAnim = React.useRef(new Animated.Value(0)).current;
+
+  const { fetchUserLogin, accessToken, refreshToken, error } = useAuth();
+
+  const triggerShake = () => {
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: 8, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 6, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -6, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const loginPress = async () => {
+    setIsLoading(true);
+    setLoginFailed(false);
+    await fetchUserLogin(email, password);
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    if (accessToken !== '' && refreshToken !== '') {
+      onLogin(true);
+    }
+  }, [accessToken, refreshToken]);
+
+  useEffect(() => {
+    if (error) {
+      setLoginFailed(true);
+      setIsLoading(false);
+      triggerShake();
+    }
+  }, [error]);
+
+  const buttonBg = loginFailed ? '#C0392B' : '#1C4D8D';
+  const buttonShadow = loginFailed ? '#C0392B' : '#1C4D8D';
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
@@ -42,15 +84,20 @@ export function LoginScreen({ onLogin, onNavigateSignup }: LoginScreenProps) {
 
           <View style={styles.form}>
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Email</Text>
-              <View style={[styles.inputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+              <Text style={[styles.label, { color: colors.text }]}>Username</Text>
+              <View
+                style={[
+                  styles.inputContainer,
+                  { backgroundColor: colors.inputBg, borderColor: loginFailed ? '#C0392B' : colors.border },
+                ]}
+              >
                 <Ionicons name="mail-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
                 <TextInput
                   style={[styles.input, { color: colors.text }]}
-                  placeholder="Enter your email"
+                  placeholder="Enter your username"
                   placeholderTextColor={colors.textMuted}
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={(text) => { setEmail(text); setLoginFailed(false); }}
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
@@ -59,32 +106,78 @@ export function LoginScreen({ onLogin, onNavigateSignup }: LoginScreenProps) {
 
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: colors.text }]}>Password</Text>
-              <View style={[styles.inputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+              <View
+                style={[
+                  styles.inputContainer,
+                  { backgroundColor: colors.inputBg, borderColor: loginFailed ? '#C0392B' : colors.border },
+                ]}
+              >
                 <Ionicons name="lock-closed-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
                 <TextInput
                   style={[styles.input, { color: colors.text }]}
                   placeholder="Enter your password"
                   placeholderTextColor={colors.textMuted}
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={(text) => { setPassword(text); setLoginFailed(false); }}
                   secureTextEntry={!showPassword}
                 />
                 <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
-                  <Ionicons name={showPassword ? "eye-outline" : "eye-off-outline"} size={20} color={colors.textMuted} />
+                  <Ionicons
+                    name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                    size={20}
+                    color={colors.textMuted}
+                  />
                 </Pressable>
               </View>
             </View>
+
+            {/* Error message */}
+            {loginFailed && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle-outline" size={16} color="#C0392B" />
+                <Text style={styles.errorText}>
+                  {error || 'Incorrect username or password. Please try again.'}
+                </Text>
+              </View>
+            )}
 
             <Pressable style={styles.forgotPassword}>
               <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
             </Pressable>
 
-            <Pressable style={styles.loginButton} onPress={onLogin}>
-              <Text style={styles.loginButtonText}>Login</Text>
-            </Pressable>
+            <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
+              <Pressable
+                style={[
+                  styles.loginButton,
+                  {
+                    backgroundColor: buttonBg,
+                    shadowColor: buttonShadow,
+                    opacity: isLoading ? 0.85 : 1,
+                  },
+                ]}
+                onPress={loginPress}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <View style={styles.loadingRow}>
+                    <ActivityIndicator size="small" color="#ffffff" style={styles.spinner} />
+                    <Text style={styles.loginButtonText}>Logging in...</Text>
+                  </View>
+                ) : loginFailed ? (
+                  <View style={styles.loadingRow}>
+                    <Ionicons name="close-circle-outline" size={20} color="#ffffff" style={styles.spinner} />
+                    <Text style={styles.loginButtonText}>Login Failed</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.loginButtonText}>Login</Text>
+                )}
+              </Pressable>
+            </Animated.View>
 
             <View style={styles.signupContainer}>
-              <Text style={[styles.signupText, { color: colors.textSecondary }]}>Don't have an account? </Text>
+              <Text style={[styles.signupText, { color: colors.textSecondary }]}>
+                Don&apos;t have an account?{' '}
+              </Text>
               <Pressable onPress={onNavigateSignup}>
                 <Text style={styles.signupLink}>Sign up</Text>
               </Pressable>
@@ -167,6 +260,20 @@ const styles = StyleSheet.create({
   eyeButton: {
     padding: 8,
   },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    marginTop: -8,
+    paddingHorizontal: 4,
+    gap: 6,
+  },
+  errorText: {
+    color: '#C0392B',
+    fontSize: 13,
+    fontWeight: '600',
+    flexShrink: 1,
+  },
   forgotPassword: {
     alignSelf: 'flex-end',
     marginBottom: 32,
@@ -177,17 +284,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   loginButton: {
-    backgroundColor: '#1C4D8D',
     height: 56,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
-    shadowColor: '#1C4D8D',
     shadowOpacity: 0.2,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 8,
     elevation: 4,
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  spinner: {
+    marginRight: 8,
   },
   loginButtonText: {
     color: '#ffffff',
